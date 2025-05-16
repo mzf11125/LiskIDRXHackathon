@@ -1,7 +1,9 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, type ReactNode } from "react"
 import { useToast } from "@/components/ui/use-toast"
+import { useAccount, useConnect, useDisconnect, useBalance, useSignMessage } from "wagmi"
+import { injected, coinbase, walletConnect } from "wagmi/connectors"
 import { authAPI } from "@/services/api"
 
 type WalletContextType = {
@@ -27,57 +29,50 @@ const WalletContext = createContext<WalletContextType>({
 export const useWallet = () => useContext(WalletContext)
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState("0")
-  const [isAuthenticating, setIsAuthenticating] = useState(false)
   const { toast } = useToast()
-
-  const isConnected = !!address
-
-  // Check if user is already connected on mount
-  useEffect(() => {
-    const storedAddress = localStorage.getItem("wallet_address")
-    const authToken = localStorage.getItem("auth_token")
-
-    if (storedAddress && authToken) {
-      setAddress(storedAddress)
-      // In a real app, you would fetch the actual balance here
-      setBalance("1000.00")
-    }
-  }, [])
+  
+  // Use Wagmi hooks from Xellar Kit
+  const { address, isConnected } = useAccount()
+  const { connectAsync, isPending } = useConnect()
+  const { disconnect: disconnectWallet } = useDisconnect()
+  const { data: balanceData } = useBalance({
+    address: address as `0x${string}` | undefined,
+    enabled: !!address,
+  })
+  const { signMessageAsync } = useSignMessage()
 
   // Connect wallet and authenticate
   const connect = async () => {
     try {
-      setIsAuthenticating(true)
+      // Connect using Wagmi with multiple connector options
+      const result = await connectAsync({
+        connector: injected(),
+        chainId: 1 // Ethereum mainnet by default
+      }).catch(() => 
+        connectAsync({
+          connector: coinbase(),
+          chainId: 1
+        })
+      ).catch(() => 
+        connectAsync({
+          connector: walletConnect(),
+          chainId: 1
+        })
+      )
 
-      // Check if window.ethereum is available
-      if (!window.ethereum) {
-        throw new Error("No Ethereum wallet found. Please install MetaMask or another wallet.")
-      }
+      const walletAddress = result.accounts[0]
 
-      // Request account access
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-      const walletAddress = accounts[0]
-
-      // Request message to sign
+      // Request message to sign from the backend
       const { message } = await authAPI.requestMessage(walletAddress)
 
-      // Sign the message
+      // Sign the message using Wagmi's signMessage
       const signature = await signMessage(message)
 
-      // Verify signature
+      // Verify signature with backend
       const authData = await authAPI.verifySignature(walletAddress, message, signature)
 
-      // Save auth token and address
+      // Save auth token
       localStorage.setItem("auth_token", authData.access_token)
-      localStorage.setItem("wallet_address", walletAddress)
-
-      // Update state
-      setAddress(walletAddress)
-
-      // In a real app, you would fetch the actual balance here
-      setBalance("1000.00")
 
       toast({
         title: "Wallet connected",
@@ -90,17 +85,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         title: "Connection failed",
         description: error.message || "Failed to connect wallet. Please try again.",
       })
-    } finally {
-      setIsAuthenticating(false)
     }
   }
 
   // Disconnect wallet
   const disconnect = () => {
-    setAddress(null)
-    setBalance("0")
+    disconnectWallet()
     localStorage.removeItem("auth_token")
-    localStorage.removeItem("wallet_address")
 
     toast({
       title: "Wallet disconnected",
@@ -111,18 +102,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Sign a message with the wallet
   const signMessage = async (message: string): Promise<string> => {
     try {
-      if (!window.ethereum) {
-        throw new Error("No Ethereum wallet found")
-      }
-
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-      const from = accounts[0]
-
-      const signature = await window.ethereum.request({
-        method: "personal_sign",
-        params: [message, from],
-      })
-
+      const signature = await signMessageAsync({ message })
       return signature
     } catch (error: any) {
       console.error("Error signing message:", error)
@@ -133,10 +113,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   return (
     <WalletContext.Provider
       value={{
-        address,
+        address: address || null,
         isConnected,
-        balance,
-        isAuthenticating,
+        balance: balanceData?.formatted || "0",
+        isAuthenticating: isPending,
         connect,
         disconnect,
         signMessage,

@@ -5,14 +5,15 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useWallet } from "@/components/wallet-provider"
 import { cn } from "@/lib/utils"
+import WalletConnectButton from "./wallet-connect-button"
+import { useWallet } from "@/components/wallet-provider"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
-  const { isConnected, address, connect, disconnect } = useWallet()
+  const { isConnected, address } = useWallet()
 
   const navigation = [
     { name: "Dashboard", href: "/" },
@@ -73,25 +74,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden md:flex items-center">
-            {isConnected ? (
-              <div className="flex items-center gap-2">
-                <div className="glass-effect rounded-full px-4 py-1.5 text-sm font-medium text-white">
-                  {truncateAddress(address!)}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={disconnect}
-                  className="border-slate-700 text-slate-300 hover:text-white"
-                >
-                  Disconnect
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={connect} className="web3-button">
-                Connect Wallet
-              </Button>
-            )}
+            <WalletConnectButton />
           </div>
           <div className="flex items-center md:hidden">
             <button
@@ -125,25 +108,8 @@ export default function Navbar() {
             ))}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-800">
-            <div className="px-4 flex items-center">
-              {isConnected ? (
-                <div className="flex flex-col w-full gap-2">
-                  <div className="glass-effect rounded-full px-4 py-2 text-sm font-medium text-white text-center">
-                    {truncateAddress(address!)}
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={disconnect}
-                    className="border-slate-700 text-slate-300 hover:text-white w-full"
-                  >
-                    Disconnect
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={connect} className="web3-button w-full">
-                  Connect Wallet
-                </Button>
-              )}
+            <div className="px-4 flex items-center justify-center">
+              <WalletConnectButton />
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
 import { WalletProvider } from "@/components/wallet-provider"
-import { Web3Provider } from "@/components/xellar-provider"
+import { Web3Provider } from "@/components/web3provider"
 import ParticleBackground from "@/components/particle-background"
 import AnimatedGradientBackground from "@/components/animated-gradient-background"
 
@@ -14,7 +14,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "IDRX Lisk Lending Platform",
   description: "Decentralized lending platform on the Lisk blockchain",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({

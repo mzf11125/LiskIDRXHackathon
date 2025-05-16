@@ -36,7 +36,7 @@ export const authAPI = {
     }
   },
 
-  // Verify signed message
+  // Verify signed message using Xellar Kit signature
   verifySignature: async (walletAddress: string, message: string, signature: string) => {
     try {
       const response = await api.post("/auth/verify", {
@@ -44,11 +44,28 @@ export const authAPI = {
         message,
         signature,
       })
+      
+      // If verification is successful, store the user's address for future reference
+      if (response.data && response.data.access_token) {
+        localStorage.setItem("wallet_address", walletAddress)
+      }
+      
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error, "Failed to verify signature"))
     }
   },
+  
+  // Check if user is authenticated
+  isAuthenticated: () => {
+    return !!localStorage.getItem("auth_token")
+  },
+  
+  // Logout/clear authentication
+  logout: () => {
+    localStorage.removeItem("auth_token")
+    localStorage.removeItem("wallet_address")
+  }
 }
 
 // Proposals API
