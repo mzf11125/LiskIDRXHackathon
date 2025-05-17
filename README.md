@@ -6,9 +6,13 @@ A decentralized lending and borrowing platform built on the Lisk blockchain, ena
 
 IDRX Lending Platform is a decentralized finance (DeFi) application that connects lenders and borrowers in a secure, transparent environment powered by Lisk blockchain technology. The platform enables users to lend their digital assets to earn interest or borrow assets by providing collateral, with special support for the IDRX token.
 
+### Live Deployment
+
+- **Backend**: [https://dingdong.loans]
+
 ### Repositories
 
-- **Backend**: [https://github.com/Lagxy/Lending-DApps]
+- **Backend**: [https://github.com/franshel/lending-api/]
 - **Smart Contract**: [https://github.com/Lagxy/Lending-DApps]
 
 ### Key Features
