@@ -1,6 +1,8 @@
 "use client"
 
-import { type ReactNode, createContext, useContext, useState } from "react"
+import { type ReactNode, createContext, useContext } from "react"
+import { useAccount, useBalance, useDisconnect } from "wagmi"
+import { useConnectModal } from "@xellar/kit"
 
 // Context to expose Web3 functionality throughout the app
 export const Web3Context = createContext<{
@@ -22,39 +24,40 @@ export const useWeb3 = () => useContext(Web3Context)
 
 // Main provider component that wraps the app
 export function Web3Provider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState("0")
-  const isConnected = !!address
+  // Use wagmi hooks (provided by Xellar Kit)
+  const { address, isConnected } = useAccount()
+  const { data: balanceData } = useBalance({
+    address: address as `0x${string}` | undefined,
+    enabled: !!address,
+  })
+  const { disconnect: disconnectWallet } = useDisconnect()
+  const { open: openConnectModal } = useConnectModal()
 
-  // Mock connect function for preview
+  // Connect using Xellar modal
   const connect = async () => {
     try {
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Set mock address and balance
-      setAddress("lsk1234567890abcdefghijklmnopqrstuvwxyz")
-      setBalance("1000.00")
-
-      console.log("Mock wallet connected successfully")
+      openConnectModal()
+      console.log("Opening Xellar connect modal")
     } catch (error) {
-      console.error("Failed to connect wallet:", error)
+      console.error("Failed to open connect modal:", error)
     }
   }
 
-  // Mock disconnect function for preview
+  // Disconnect wallet
   const disconnect = () => {
-    setAddress(null)
-    setBalance("0")
-    console.log("Mock wallet disconnected")
+    disconnectWallet()
+    console.log("Wallet disconnected")
   }
 
   return (
-    <Web3Context.Provider value={{ address, isConnected, balance, connect, disconnect }}>
+    <Web3Context.Provider value={{ 
+      address: address || null, 
+      isConnected, 
+      balance: balanceData?.formatted || "0", 
+      connect, 
+      disconnect 
+    }}>
       {children}
     </Web3Context.Provider>
   )
 }
-
-// Note: In a production environment, you would replace this with the actual Xellar implementation
-// This is a simplified version for the preview environment

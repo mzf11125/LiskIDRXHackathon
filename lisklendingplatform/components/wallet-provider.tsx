@@ -2,9 +2,9 @@
 
 import { createContext, useContext, type ReactNode } from "react"
 import { useToast } from "@/components/ui/use-toast"
-import { useAccount, useConnect, useDisconnect, useBalance, useSignMessage } from "wagmi"
-import { injected, coinbase, walletConnect } from "wagmi/connectors"
+import { useAccount, useDisconnect, useBalance, useSignMessage } from "wagmi"
 import { authAPI } from "@/services/api"
+import { useConnectModal } from "@xellar/kit"
 
 type WalletContextType = {
   address: string | null
@@ -33,57 +33,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   
   // Use Wagmi hooks from Xellar Kit
   const { address, isConnected } = useAccount()
-  const { connectAsync, isPending } = useConnect()
+  const { open: openConnectModal } = useConnectModal()
   const { disconnect: disconnectWallet } = useDisconnect()
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, isPending } = useBalance({
     address: address as `0x${string}` | undefined,
     enabled: !!address,
   })
   const { signMessageAsync } = useSignMessage()
 
-  // Connect wallet and authenticate
+  // Connect wallet using Xellar modal
   const connect = async () => {
     try {
-      // Connect using Wagmi with multiple connector options
-      const result = await connectAsync({
-        connector: injected(),
-        chainId: 1 // Ethereum mainnet by default
-      }).catch(() => 
-        connectAsync({
-          connector: coinbase(),
-          chainId: 1
-        })
-      ).catch(() => 
-        connectAsync({
-          connector: walletConnect(),
-          chainId: 1
-        })
-      )
-
-      const walletAddress = result.accounts[0]
-
-      // Request message to sign from the backend
-      const { message } = await authAPI.requestMessage(walletAddress)
-
-      // Sign the message using Wagmi's signMessage
-      const signature = await signMessage(message)
-
-      // Verify signature with backend
-      const authData = await authAPI.verifySignature(walletAddress, message, signature)
-
-      // Save auth token
-      localStorage.setItem("auth_token", authData.access_token)
+      // Open Xellar's connect modal
+      openConnectModal()
 
       toast({
-        title: "Wallet connected",
-        description: "Your wallet has been successfully connected and authenticated",
+        title: "Connect wallet",
+        description: "Please select your wallet in the modal",
       })
     } catch (error: any) {
       console.error("Connection failed:", error)
       toast({
         variant: "destructive",
         title: "Connection failed",
-        description: error.message || "Failed to connect wallet. Please try again.",
+        description: error.message || "Failed to open wallet modal. Please try again.",
       })
     }
   }

@@ -2,9 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { useWallet } from "./wallet-provider"
+import { useConnectModal } from "@xellar/kit"
 
 export function WalletConnectButton() {
-  const { isConnected, connect, disconnect, address } = useWallet()
+  const { isConnected, disconnect, address } = useWallet()
+  const { open: openXellarModal } = useConnectModal()
 
   return (
     <div>
@@ -18,7 +20,7 @@ export function WalletConnectButton() {
           </Button>
         </div>
       ) : (
-        <Button onClick={connect}>Connect Wallet</Button>
+        <Button onClick={() => openXellarModal()}>Connect Wallet</Button>
       )}
     </div>
   )
