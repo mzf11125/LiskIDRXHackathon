@@ -8,7 +8,7 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 
 ### Live Deployment
 
-- **Backend**: [https://dingdong.loans]
+- **Website**: [https://dingdong.loans]
 
 ### Repositories
 
