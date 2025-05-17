@@ -1,66 +1,106 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { profileAPI } from "@/services/api"
-import { useToast } from "@/components/ui/use-toast"
+import { useState, useCallback, useEffect } from "react"
+import { useToast } from "./use-toast"
+import { useWallet } from "@/components/wallet-provider"
+import { api } from "@/services"
 
 export type ProfileData = {
-  display_name: string
-  email: string
-  company_name: string
-  company_position: string
-  company_website: string
-  company_description: string
+  id?: string
+  wallet_address?: string
+  name: string
+  email?: string
+  bio?: string
+  avatar_url?: string
+  website?: string
+  twitter?: string
+  telegram?: string
+  github?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export function useProfile() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { address, isConnected } = useWallet()
   const { toast } = useToast()
-
-  // Fetch user profile from the API
+  
+  // Fetch profile data from API
   const fetchProfile = useCallback(async () => {
+    if (!isConnected || !address) return null
+    
     setIsLoading(true)
     try {
-      const profileData = await profileAPI.getMyProfile()
-      setProfile(profileData)
-      return profileData
+      // Get profile from API
+      const response = await api.get<ProfileData>('/api/profiles/me')
+      
+      if (response.success && response.data) {
+        setProfile(response.data)
+        return response.data
+      }
+      
+      return null
     } catch (error) {
       console.error("Failed to fetch profile:", error)
       return null
     } finally {
       setIsLoading(false)
     }
-  }, [])
-
-  // Update user profile
-  const updateProfile = useCallback(async (profileData: ProfileData) => {
-    setIsLoading(true)
-    try {
-      const updatedProfile = await profileAPI.updateProfile(profileData)
-      setProfile(updatedProfile)
-      
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated",
-      })
-      
-      return updatedProfile
-    } catch (error: any) {
-      console.error("Failed to update profile:", error)
-      
+  }, [address, isConnected])
+  
+  // Update profile data
+  const updateProfile = useCallback(async (data: Partial<ProfileData>) => {
+    if (!isConnected || !address) {
       toast({
         variant: "destructive",
-        title: "Failed to update profile",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        title: "Error",
+        description: "Please connect your wallet to update your profile.",
       })
+      return null
+    }
+    
+    setIsLoading(true)
+    try {
+      const response = await api.post<Partial<ProfileData>, ProfileData>('/api/profiles/me', data)
       
+      if (response.success && response.data) {
+        setProfile(response.data)
+        toast({
+          title: "Success",
+          description: "Profile updated successfully",
+        })
+        return response.data
+      } else {
+        throw new Error(response.message || "Failed to update profile")
+      }
+    } catch (error) {
+      console.error("Failed to update profile:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+      })
       return null
     } finally {
       setIsLoading(false)
     }
-  }, [toast])
-
+  }, [address, isConnected, toast])
+  
+  // Clear profile when wallet is disconnected
+  useEffect(() => {
+    if (!isConnected) {
+      setProfile(null)
+    }
+  }, [isConnected])
+  
+  // Auto-fetch profile when wallet is connected
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchProfile()
+    }
+  }, [isConnected, address, fetchProfile])
+  
   return {
     profile,
     isLoading,

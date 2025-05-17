@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Search, Info, Shield, AlertTriangle } from "lucide-react"
@@ -11,23 +11,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWallet } from "@/components/wallet-provider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
-import { pools, getEligiblePoolsForBorrower } from "@/data/mock-data"
+import { usePools } from "@/hooks/use-pools"
+import { useBorrowers } from "@/hooks/use-borrowers"
 
 export default function PoolsPage() {
   const { isConnected, connect, address } = useWallet()
+  const { pools, isLoading: poolsLoading } = usePools()
+  const { eligiblePools, isLoading: borrowersLoading } = useBorrowers()
   const [searchTerm, setSearchTerm] = useState("")
+  const [filteredPools, setFilteredPools] = useState(pools)
+  
+  // Update filtered pools when pools or search term changes
+  useEffect(() => {
+    if (pools) {
+      setFilteredPools(pools.filter(
+        (pool) =>
+          pool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          pool.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          pool.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      ))
+    }
+  }, [pools, searchTerm])
 
-  // Filter pools based on search term
-  const filteredPools = pools.filter(
-    (pool) =>
-      pool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pool.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pool.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Get eligible pools for the connected wallet
-  const eligiblePools = isConnected && address ? getEligiblePoolsForBorrower(address) : []
   const eligiblePoolIds = eligiblePools.map((pool) => pool.id)
+  const isLoading = poolsLoading || borrowersLoading
 
   if (!isConnected) {
     return (
@@ -39,6 +46,15 @@ export default function PoolsPage() {
         <Button onClick={connect} className="web3-button">
           Connect Wallet
         </Button>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-6 gradient-text">Loading Pools</h1>
+        <p className="text-slate-400 mb-8">Fetching lending pools data...</p>
       </div>
     )
   }
@@ -143,7 +159,7 @@ export default function PoolsPage() {
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-slate-400">Available Assets</p>
                     <div className="flex flex-wrap gap-2">
-                      {pool.assets.map((asset) => (
+                      {pool.assets?.map((asset) => (
                         <Badge key={asset.symbol} variant="secondary" className="bg-slate-800">
                           {asset.symbol}
                         </Badge>
@@ -264,7 +280,7 @@ export default function PoolsPage() {
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-slate-400">Available Assets</p>
                       <div className="flex flex-wrap gap-2">
-                        {pool.assets.map((asset) => (
+                        {pool.assets?.map((asset) => (
                           <Badge key={asset.symbol} variant="secondary" className="bg-slate-800">
                             {asset.symbol}
                           </Badge>
@@ -320,11 +336,11 @@ export default function PoolsPage() {
                 {pools.map((pool) => {
                   // Calculate average APY and APR
                   const avgApy =
-                    pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apy?.replace("%", "") || "0"), 0) /
-                    pool.assets.length
+                    pool.assets?.reduce((sum, asset) => sum + Number.parseFloat(asset.apy?.replace("%", "") || "0"), 0) /
+                    (pool.assets?.length || 1) || 0
                   const avgApr =
-                    pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apr?.replace("%", "") || "0"), 0) /
-                    pool.assets.length
+                    pool.assets?.reduce((sum, asset) => sum + Number.parseFloat(asset.apr?.replace("%", "") || "0"), 0) /
+                    (pool.assets?.length || 1) || 0
 
                   return (
                     <tr key={pool.id} className="border-b border-slate-800 hover:bg-slate-900/50 transition-colors">

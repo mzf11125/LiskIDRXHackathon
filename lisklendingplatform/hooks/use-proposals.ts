@@ -1,88 +1,80 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { proposalsAPI } from "@/services/api"
-import { useToast } from "@/components/ui/use-toast"
+import { useState, useCallback, useEffect } from "react"
+import { useToast } from "./use-toast"
+import { api } from "@/services"
+import { useWallet } from "@/components/wallet-provider"
 
-export type ProposalData = {
-  id?: string
-  company_name: string
-  accepted_token: string
-  total_pooled: string
-  short_description: string
-  full_description: string
-  business_plan: string
-  expected_return: string
-  duration: string
-  minimum_investment: string
-  maximum_investment: string
-  deadline: string
-  target_funding: string
-  website: string
-  social_media?: {
-    twitter?: string
-    linkedin?: string
-  }
-  tags?: string[]
-  documents?: Array<{
-    title: string
-    type: string
-    url: string
-    size: string
-  }>
-  status?: 'pending' | 'active' | 'funded' | 'expired'
+export type ProposalStatus = "pending" | "active" | "passed" | "rejected" | "executed"
+
+export type Proposal = {
+  id: string
+  title: string
+  description: string
+  proposer: string
+  status: ProposalStatus
+  votesFor: number
+  votesAgainst: number
+  startDate: string
+  endDate: string
+  executionDate?: string
 }
 
-export function useProposals() {
-  const [proposals, setProposals] = useState<ProposalData[]>([])
-  const [myProposals, setMyProposals] = useState<ProposalData[]>([])
-  const [currentProposal, setCurrentProposal] = useState<ProposalData | null>(null)
+export type NewProposal = {
+  title: string
+  description: string
+  poolId: string
+}
+
+export function useProposals(poolId?: string) {
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [currentProposal, setCurrentProposal] = useState<Proposal | null>(null)
+  const [myProposals, setMyProposals] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const { address, isConnected } = useWallet()
   const { toast } = useToast()
   
-  // Fetch all proposals
-  const fetchProposals = useCallback(async () => {
+  const fetchProposals = useCallback(async (id?: string) => {
     setIsLoading(true)
     try {
-      const data = await proposalsAPI.getAll()
-      setProposals(data.proposals || [])
-      return data.proposals
+      const targetPoolId = id || poolId
+      if (!targetPoolId) {
+        return []
+      }
+      
+      const response = await api.get<Proposal[]>(`/api/pools/${targetPoolId}/proposals`)
+      
+      if (response.success && response.data) {
+        setProposals(response.data)
+        return response.data
+      }
+      
+      return []
     } catch (error) {
-      console.error("Failed to fetch proposals:", error)
+      console.error(`Failed to fetch proposals:`, error)
       return []
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [poolId])
   
-  // Fetch proposals created by the current user
-  const fetchMyProposals = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const data = await proposalsAPI.getMyProposals()
-      setMyProposals(data || [])
-      return data
-    } catch (error) {
-      console.error("Failed to fetch user proposals:", error)
-      return []
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-  
-  // Fetch a specific proposal by ID
   const fetchProposalById = useCallback(async (id: string) => {
     setIsLoading(true)
     try {
-      const proposal = await proposalsAPI.getById(id)
-      setCurrentProposal(proposal)
-      return proposal
-    } catch (error: any) {
+      const response = await api.get<Proposal>(`/api/proposals/${id}`)
+      
+      if (response.success && response.data) {
+        setCurrentProposal(response.data)
+        return response.data
+      }
+      
+      return null
+    } catch (error) {
       console.error(`Failed to fetch proposal ${id}:`, error)
       toast({
         variant: "destructive",
-        title: "Error loading proposal",
-        description: error.message || "Failed to load the proposal details",
+        title: "Error",
+        description: "Failed to load proposal details. Please try again.",
       })
       return null
     } finally {
@@ -90,41 +82,138 @@ export function useProposals() {
     }
   }, [toast])
   
-  // Create a new proposal
-  const createProposal = useCallback(async (proposalData: ProposalData) => {
-    setIsLoading(true)
+  const fetchMyProposals = useCallback(async () => {
+    if (!isConnected || !address) {
+      setMyProposals([]);
+      return [];
+    }
+    
+    setIsLoading(true);
     try {
-      const newProposal = await proposalsAPI.create(proposalData)
+      const response = await api.get<any[]>(`/api/proposals/user/${address}`);
       
-      toast({
-        title: "Proposal created",
-        description: "Your business proposal has been successfully submitted",
-      })
+      if (response.success && response.data) {
+        setMyProposals(response.data);
+        return response.data;
+      }
       
-      return newProposal
-    } catch (error: any) {
-      console.error("Failed to create proposal:", error)
-      
+      return [];
+    } catch (error) {
+      console.error("Failed to fetch user proposals:", error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address, isConnected]);
+  
+  const createProposal = useCallback(async (data: NewProposal) => {
+    if (!isConnected || !address) {
       toast({
         variant: "destructive",
-        title: "Failed to create proposal",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        title: "Error",
+        description: "Please connect your wallet to create a proposal.",
       })
+      return null
+    }
+    
+    setIsLoading(true)
+    try {
+      const proposalData = {
+        ...data,
+        proposer: address
+      }
       
+      const response = await api.post<typeof proposalData, Proposal>('/api/proposals', proposalData)
+      
+      if (response.success && response.data) {
+        toast({
+          title: "Success",
+          description: "Proposal created successfully",
+        })
+        
+        // Refresh proposals list
+        fetchProposals()
+        
+        return response.data
+      } else {
+        throw new Error(response.message || "Failed to create proposal")
+      }
+    } catch (error) {
+      console.error("Failed to create proposal:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create proposal",
+      })
       return null
     } finally {
       setIsLoading(false)
     }
-  }, [toast])
+  }, [address, isConnected, toast, fetchProposals])
+  
+  const voteOnProposal = useCallback(async (proposalId: string, voteFor: boolean) => {
+    if (!isConnected || !address) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please connect your wallet to vote.",
+      })
+      return false
+    }
+    
+    setIsLoading(true)
+    try {
+      const voteData = {
+        proposalId,
+        voter: address,
+        voteFor
+      }
+      
+      const response = await api.post<typeof voteData, any>('/api/proposals/vote', voteData)
+      
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Vote submitted successfully",
+        })
+        
+        // Refresh proposal data
+        fetchProposalById(proposalId)
+        fetchProposals()
+        
+        return true
+      } else {
+        throw new Error(response.message || "Failed to submit vote")
+      }
+    } catch (error) {
+      console.error("Failed to submit vote:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit vote",
+      })
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }, [address, isConnected, toast, fetchProposals, fetchProposalById])
+  
+  // Auto-fetch proposals when poolId changes
+  useEffect(() => {
+    if (poolId) {
+      fetchProposals()
+    }
+  }, [poolId, fetchProposals])
   
   return {
     proposals,
-    myProposals,
     currentProposal,
+    myProposals,
     isLoading,
     fetchProposals,
-    fetchMyProposals,
     fetchProposalById,
+    fetchMyProposals,
     createProposal,
+    voteOnProposal,
   }
 }

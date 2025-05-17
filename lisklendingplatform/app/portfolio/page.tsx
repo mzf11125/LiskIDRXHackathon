@@ -8,17 +8,33 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { WalletRiskAnalysis } from "@/components/wallet-risk-analysis"
 import { useProposals } from "@/hooks/use-proposals"
+import { usePortfolio } from "@/hooks/use-portfolio"
+import { ArrowUpRight, ArrowDownRight, Calendar, Clock } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns"
 
 export default function PortfolioPage() {
   const { isConnected, connect } = useWallet()
   const router = useRouter()
-  const { myProposals, fetchMyProposals, isLoading } = useProposals()
+  const { myProposals, fetchMyProposals, isLoading: proposalsLoading } = useProposals()
+  const { 
+    investments, 
+    transactions, 
+    fetchInvestments, 
+    fetchTransactions,
+    isLoadingInvestments, 
+    isLoadingTransactions 
+  } = usePortfolio()
 
   useEffect(() => {
     if (isConnected) {
-      fetchMyProposals()
+      if (fetchMyProposals) {
+        fetchMyProposals()
+      }
+      fetchInvestments()
+      fetchTransactions()
     }
-  }, [isConnected, fetchMyProposals])
+  }, [isConnected, fetchMyProposals, fetchInvestments, fetchTransactions])
 
   if (!isConnected) {
     return (
@@ -53,12 +69,52 @@ export default function PortfolioPage() {
                   <CardDescription>Track your active investments and returns</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <p className="text-slate-400 text-center mb-4">You don't have any active investments yet.</p>
-                    <Button onClick={() => router.push("/lend")} className="web3-button">
-                      Browse Investment Opportunities
-                    </Button>
-                  </div>
+                  {isLoadingInvestments ? (
+                    <div className="flex justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                  ) : investments && investments.length > 0 ? (
+                    <div className="space-y-4">
+                      {investments.map((investment) => (
+                        <div key={investment.id} className="bg-slate-800/50 p-4 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-medium">{investment.poolName}</h3>
+                            <Badge variant={investment.status === 'active' ? "outline" : "secondary"}>
+                              {investment.status === 'active' ? 'Active' : 'Closed'}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div>
+                              <p className="text-xs text-slate-400">Amount</p>
+                              <p>{investment.amount} {investment.token}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">APY</p>
+                              <p>{investment.apy}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Earned</p>
+                              <p className="text-green-400">{investment.earned} {investment.token}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-400">Since</p>
+                              <p className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(investment.startDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <p className="text-slate-400 text-center mb-4">You don't have any active investments yet.</p>
+                      <Button onClick={() => router.push("/lend")} className="web3-button">
+                        Browse Investment Opportunities
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -69,7 +125,7 @@ export default function PortfolioPage() {
                   <CardDescription>Manage your submitted business proposals</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {isLoading ? (
+                  {proposalsLoading ? (
                     <div className="flex justify-center py-12">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                     </div>
@@ -106,9 +162,48 @@ export default function PortfolioPage() {
                   <CardDescription>View your recent transactions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <p className="text-slate-400 text-center">No transactions found.</p>
-                  </div>
+                  {isLoadingTransactions ? (
+                    <div className="flex justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                  ) : transactions && transactions.length > 0 ? (
+                    <div className="space-y-2">
+                      {transactions.map((transaction) => (
+                        <div key={transaction.id} className="bg-slate-800/50 p-3 rounded-lg flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                              transaction.type === 'deposit' || transaction.type === 'interest' 
+                                ? 'bg-green-500/20 text-green-500' 
+                                : 'bg-red-500/20 text-red-500'
+                            }`}>
+                              {transaction.type === 'deposit' || transaction.type === 'interest' ? (
+                                <ArrowUpRight className="h-4 w-4" />
+                              ) : (
+                                <ArrowDownRight className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium capitalize">{transaction.type}</p>
+                              <p className="text-xs text-slate-400">{transaction.poolName || '-'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={transaction.type === 'deposit' || transaction.type === 'interest' ? 'text-green-400' : ''}>
+                              {transaction.type === 'withdrawal' || transaction.type === 'repay' ? '-' : '+'}{transaction.amount} {transaction.token}
+                            </p>
+                            <p className="text-xs text-slate-400 flex items-center gap-1 justify-end">
+                              <Clock className="h-3 w-3" />
+                              {new Date(transaction.timestamp).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <p className="text-slate-400 text-center">No transactions found.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

@@ -537,14 +537,14 @@ const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
     asChild?: boolean
-    isActive?: boolean
+    isactive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
       asChild = false,
-      isActive = false,
+      isactive = false,
       variant = "default",
       size = "default",
       tooltip,
@@ -561,7 +561,7 @@ const SidebarMenuButton = React.forwardRef<
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
-        data-active={isActive}
+        data-active={isactive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
       />
@@ -710,9 +710,9 @@ const SidebarMenuSubButton = React.forwardRef<
   React.ComponentProps<"a"> & {
     asChild?: boolean
     size?: "sm" | "md"
-    isActive?: boolean
+    isactive?: boolean
   }
->(({ asChild = false, size = "md", isActive, className, ...props }, ref) => {
+>(({ asChild = false, size = "md", isactive, className, ...props }, ref) => {
   const Comp = asChild ? Slot : "a"
 
   return (
@@ -720,7 +720,7 @@ const SidebarMenuSubButton = React.forwardRef<
       ref={ref}
       data-sidebar="menu-sub-button"
       data-size={size}
-      data-active={isActive}
+      data-active={isactive}
       className={cn(
         "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
         "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",

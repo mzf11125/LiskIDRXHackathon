@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, ArrowRight, TrendingUp, Calendar, Wallet, Shield } from "lucide-react"
@@ -9,13 +9,30 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { getActiveBusinessProposals } from "@/data/business-proposals"
+import { businessProposalsService } from "@/services"
+import type { BusinessProposal } from "@/types/business-proposal"
 
 export default function BusinessProposals() {
   const [searchTerm, setSearchTerm] = useState("")
   const [tokenFilter, setTokenFilter] = useState<string | null>(null)
+  const [proposals, setProposals] = useState<BusinessProposal[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const proposals = getActiveBusinessProposals()
+  useEffect(() => {
+    const fetchProposals = async () => {
+      setIsLoading(true)
+      try {
+        const data = await businessProposalsService.getActiveProposals()
+        setProposals(data)
+      } catch (error) {
+        console.error("Failed to fetch proposals:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProposals()
+  }, [])
 
   // Filter proposals based on search term and token filter
   const filteredProposals = proposals.filter(
@@ -70,107 +87,105 @@ export default function BusinessProposals() {
         </div>
       </div>
 
-      {filteredProposals.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="web3-card animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-slate-700 rounded-md w-2/3 mb-2"></div>
+                <div className="h-4 bg-slate-700 rounded-md w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-4 bg-slate-700 rounded-md w-full mb-4"></div>
+                <div className="h-4 bg-slate-700 rounded-md w-5/6 mb-2"></div>
+                <div className="h-4 bg-slate-700 rounded-md w-4/6"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredProposals.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProposals.map((proposal) => (
-            <Card
-              key={proposal.id}
-              className="web3-card overflow-hidden group hover:scale-[1.02] transition-all duration-300"
-            >
-              <CardHeader className="pb-2 relative">
-                <div className="absolute top-3 right-3">
-                  <Badge
-                    variant="outline"
-                    className={`
-                      ${
-                        proposal.walletAnalysis.riskLevel === "low"
-                          ? "bg-green-500/20 text-green-500 border-green-500/50"
-                          : proposal.walletAnalysis.riskLevel === "medium"
-                            ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
-                            : "bg-red-500/20 text-red-500 border-red-500/50"
-                      }
-                    `}
-                  >
-                    {proposal.walletAnalysis.riskLevel.charAt(0).toUpperCase() +
-                      proposal.walletAnalysis.riskLevel.slice(1)}{" "}
-                    Risk
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden">
+            <Card key={proposal.id} className="web3-card overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     {proposal.logo ? (
                       <Image
-                        src={proposal.logo || "/placeholder.svg"}
+                        src={proposal.logo}
                         alt={proposal.companyName}
-                        width={48}
-                        height={48}
+                        width={40}
+                        height={40}
+                        className="rounded-md"
                       />
                     ) : (
-                      <div className="text-2xl font-bold">{proposal.companyName.charAt(0)}</div>
+                      <div className="w-10 h-10 rounded-md bg-slate-700 flex items-center justify-center text-xl font-bold">
+                        {proposal.companyName.charAt(0)}
+                      </div>
                     )}
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg gradient-text">{proposal.companyName}</CardTitle>
-                    <CardDescription className="flex items-center gap-1">
-                      <Wallet className="h-3 w-3" /> Accepts {proposal.acceptedToken} Only
-                    </CardDescription>
+                    <div>
+                      <CardTitle className="text-lg">{proposal.companyName}</CardTitle>
+                      <CardDescription className="text-xs">
+                        <Badge variant="outline" className="text-primary bg-primary/10 border-primary/20">
+                          {proposal.acceptedToken}
+                        </Badge>
+                      </CardDescription>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="pb-2">
-                <p className="text-sm text-slate-300 mb-4">{proposal.shortDescription}</p>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-                      <TrendingUp className="h-3 w-3" /> Return
+                <p className="text-sm text-slate-300 line-clamp-2 mb-4">{proposal.shortDescription}</p>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-slate-400">Funding Progress</span>
+                      <span className="text-primary">
+                        {proposal.currentFunding} / {proposal.targetFunding}
+                      </span>
                     </div>
-                    <p className="text-sm font-medium gradient-text">{proposal.expectedReturn}</p>
+                    <Progress value={(parseFloat(proposal.currentFunding) / parseFloat(proposal.targetFunding)) * 100} />
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-                      <Calendar className="h-3 w-3" /> Duration
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-slate-400">Return:</span>
+                      <span className="text-slate-200 font-medium">{proposal.expectedReturn}</span>
                     </div>
-                    <p className="text-sm font-medium">{proposal.duration}</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-                      <Shield className="h-3 w-3" /> Pool
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-slate-400">Duration:</span>
+                      <span className="text-slate-200 font-medium">{proposal.duration}</span>
                     </div>
-                    <p className="text-sm font-medium">{proposal.totalPooled}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Funding Progress</span>
-                    <span>
-                      {(
-                        (Number.parseFloat(proposal.currentFunding.replace(/[^0-9.-]+/g, "")) /
-                          Number.parseFloat(proposal.targetFunding.replace(/[^0-9.-]+/g, ""))) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      (Number.parseFloat(proposal.currentFunding.replace(/[^0-9.-]+/g, "")) /
-                        Number.parseFloat(proposal.targetFunding.replace(/[^0-9.-]+/g, ""))) *
-                      100
-                    }
-                    className="h-1.5 bg-slate-800"
-                  />
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>
-                      {proposal.currentFunding} / {proposal.targetFunding}
-                    </span>
-                    <span>{proposal.investorCount} investors</span>
+                    <div className="flex items-center gap-1.5">
+                      <Wallet className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-slate-400">Min:</span>
+                      <span className="text-slate-200 font-medium">{proposal.minimumInvestment}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-slate-400">Risk:</span>
+                      <span
+                        className={`font-medium ${
+                          proposal.walletAnalysis.riskLevel === "low"
+                            ? "text-green-500"
+                            : proposal.walletAnalysis.riskLevel === "medium"
+                              ? "text-yellow-500"
+                              : "text-red-500"
+                        }`}
+                      >
+                        {proposal.walletAnalysis.riskLevel.charAt(0).toUpperCase() +
+                          proposal.walletAnalysis.riskLevel.slice(1)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
               <CardFooter>
                 <Link href={`/lend/${proposal.id}`} className="w-full">
-                  <Button className="w-full web3-button group">
-                    View Proposal <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  <Button className="w-full web3-button-secondary group" size="sm">
+                    View Proposal
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
               </CardFooter>
@@ -178,25 +193,9 @@ export default function BusinessProposals() {
           ))}
         </div>
       ) : (
-        <Card className="web3-card p-8 text-center">
-          <CardTitle className="mb-4 gradient-text">No Matching Proposals</CardTitle>
-          <CardDescription className="text-slate-400 mb-6">
-            {searchTerm || tokenFilter
-              ? "No proposals match your current search criteria. Try adjusting your filters."
-              : "There are no active business proposals at the moment. Check back later."}
-          </CardDescription>
-          {(searchTerm || tokenFilter) && (
-            <Button
-              onClick={() => {
-                setSearchTerm("")
-                setTokenFilter(null)
-              }}
-              className="web3-button"
-            >
-              Clear Filters
-            </Button>
-          )}
-        </Card>
+        <div className="text-center py-16">
+          <p className="text-slate-400">No proposals found matching your criteria.</p>
+        </div>
       )}
     </div>
   )

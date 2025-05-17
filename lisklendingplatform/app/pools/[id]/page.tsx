@@ -1,33 +1,66 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { ArrowLeft, AlertCircle, X } from "lucide-react"
+import { ArrowLeft, AlertCircle, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWallet } from "@/components/wallet-provider"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { getPoolById, getAvailableAssetsForBorrower, getBorrowerByAddress } from "@/data/mock-data"
+import { usePools } from "@/hooks/use-pools"
+import { useBorrowers } from "@/hooks/use-borrowers"
 
 export default function PoolDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { isConnected, connect, address } = useWallet()
   const [activeTab, setActiveTab] = useState("overview")
-
-  // Get pool data
-  const pool = getPoolById(params.id)
-
-  // Get borrower data
-  const borrower = address ? getBorrowerByAddress(address) : undefined
-
-  // Get available assets for the borrower
-  const availableAssets = address ? getAvailableAssetsForBorrower(address, params.id) : []
-
+  const { fetchPoolById, currentPool: pool, isLoading: poolLoading } = usePools()
+  const { currentBorrower: borrower, fetchAvailableAssets, isLoading: borrowerLoading } = useBorrowers()
+  const [availableAssets, setAvailableAssets] = useState<any[]>([])
+  const [assetLoading, setAssetLoading] = useState(false)
+  
   // Check if borrower is eligible for this pool
-  const isEligible = borrower?.eligiblePools.includes(params.id) || false
+  const isEligible = borrower?.eligiblePools?.includes(params.id) || false
+  const isLoading = poolLoading || borrowerLoading || assetLoading
+
+  // Fetch pool data
+  useEffect(() => {
+    fetchPoolById(params.id)
+  }, [params.id, fetchPoolById])
+  
+  // Fetch available assets when connected and pool is loaded
+  useEffect(() => {
+    const getAvailableAssets = async () => {
+      if (isConnected && address && pool) {
+        setAssetLoading(true)
+        try {
+          const assets = await fetchAvailableAssets(address, params.id)
+          setAvailableAssets(assets)
+        } catch (error) {
+          console.error("Failed to fetch available assets:", error)
+        } finally {
+          setAssetLoading(false)
+        }
+      }
+    }
+    
+    getAvailableAssets()
+  }, [isConnected, address, pool, params.id, fetchAvailableAssets])
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        <h1 className="text-3xl font-bold mb-6 gradient-text">Loading Pool Details</h1>
+        <p className="text-slate-400 mb-8 max-w-md mx-auto">
+          Please wait while we fetch the lending pool information...
+        </p>
+      </div>
+    )
+  }
 
   if (!pool) {
     return (
@@ -252,7 +285,7 @@ export default function PoolDetailPage({ params }: { params: { id: string } }) {
                 <div>
                   <h3 className="text-lg font-medium mb-2">Supported Assets</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {pool.assets.map((asset) => (
+                    {pool.assets?.map((asset) => (
                       <div key={asset.symbol} className="bg-slate-800/50 p-4 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
@@ -261,4 +294,265 @@ export default function PoolDetailPage({ params }: { params: { id: string } }) {
                           <div>
                             <p className="font-medium">{asset.symbol}</p>
                             <p className="text-xs text-slate-400">{asset.name}</p>
-                          </div>\
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div>
+                            <p className="text-xs text-slate-400">Supply APY</p>
+                            <p className="text-sm text-green-500">{asset.apy}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400">Borrow APR</p>
+                            <p className="text-sm text-yellow-500">{asset.apr}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assets" className="space-y-6">
+          <Card className="web3-card">
+            <CardHeader>
+              <CardTitle>Available Assets</CardTitle>
+              <CardDescription>Assets available for lending and borrowing in this pool</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {pool.assets?.map((asset) => (
+                    <div key={asset.symbol} className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                            {asset.symbol.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{asset.symbol}</p>
+                            <p className="text-xs text-slate-400">{asset.name}</p>
+                          </div>
+                        </div>
+                        {availableAssets.some((a) => a.symbol === asset.symbol) ? (
+                          <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/50">
+                            Available
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/50">
+                            Unavailable
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-slate-400">Total Supply</p>
+                          <p className="text-sm font-medium">{asset.totalSupply}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Supply APY</p>
+                          <p className="text-sm font-medium text-green-500">{asset.apy}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Borrow APR</p>
+                          <p className="text-sm font-medium text-yellow-500">{asset.apr}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <p className="text-xs text-slate-400 mb-1">Utilization</p>
+                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${asset.utilization || "0%"}` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <p className="text-xs text-slate-500">{asset.utilization}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 mt-4">
+                        <Button size="sm" className="w-1/2 web3-button" disabled={!isEligible}>
+                          Supply
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="w-1/2 web3-button"
+                          disabled={!isEligible || !availableAssets.some((a) => a.symbol === asset.symbol)}
+                        >
+                          Borrow
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="proposals" className="space-y-6">
+          <Card className="web3-card">
+            <CardHeader>
+              <CardTitle>Active Proposals</CardTitle>
+              <CardDescription>Governance proposals for this lending pool</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pool.proposals && pool.proposals.length > 0 ? (
+                <div className="space-y-4">
+                  {pool.proposals.map((proposal) => (
+                    <div
+                      key={proposal.id}
+                      className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50 hover:bg-slate-800/60 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium">{proposal.title}</h3>
+                        <Badge
+                          variant="outline"
+                          className={
+                            proposal.status === "active"
+                              ? "bg-blue-500/20 text-blue-400 border-blue-500/50"
+                              : proposal.status === "passed"
+                              ? "bg-green-500/20 text-green-500 border-green-500/50"
+                              : proposal.status === "rejected"
+                              ? "bg-red-500/20 text-red-500 border-red-500/50"
+                              : "bg-yellow-500/20 text-yellow-400 border-yellow-500/50"
+                          }
+                        >
+                          {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-300 mb-3">{proposal.description}</p>
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div>
+                          <p className="text-xs text-slate-400">Proposer</p>
+                          <p className="text-sm truncate">{proposal.proposer.slice(0, 6)}...{proposal.proposer.slice(-4)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">End Date</p>
+                          <p className="text-sm">{new Date(proposal.endDate).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400">Votes</p>
+                          <p className="text-sm">
+                            <span className="text-green-500">{proposal.votesFor}</span> /{" "}
+                            <span className="text-red-500">{proposal.votesAgainst}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-500"
+                          style={{
+                            width: `${
+                              (proposal.votesFor / (proposal.votesFor + proposal.votesAgainst || 1)) * 100
+                            }%`,
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-slate-400 mb-4">No active proposals for this pool at the moment.</p>
+                  <Button className="web3-button">Create Proposal</Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="requirements" className="space-y-6">
+          <Card className="web3-card">
+            <CardHeader>
+              <CardTitle>Borrower Requirements</CardTitle>
+              <CardDescription>Requirements to borrow from this lending pool</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {pool.borrowerRequirements ? (
+                  <>
+                    {pool.borrowerRequirements.kycRequired && (
+                      <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+                        <h3 className="font-medium mb-2">KYC Verification Required</h3>
+                        <p className="text-sm text-slate-300 mb-3">
+                          This pool requires Know Your Customer (KYC) verification to ensure compliance with regulatory
+                          requirements.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-4 h-4 rounded-full ${
+                              borrower?.kycVerified ? "bg-green-500" : "bg-red-500"
+                            }`}
+                          ></div>
+                          <p className="text-sm">
+                            {borrower?.kycVerified ? "You have completed KYC verification" : "You need to complete KYC verification"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {pool.borrowerRequirements.whitelistRequired && (
+                      <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+                        <h3 className="font-medium mb-2">Whitelist Required</h3>
+                        <p className="text-sm text-slate-300 mb-3">
+                          This pool is restricted to whitelisted addresses only. Whitelisting is managed by the pool
+                          administrators.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-4 h-4 rounded-full ${
+                              borrower?.whitelisted ? "bg-green-500" : "bg-red-500"
+                            }`}
+                          ></div>
+                          <p className="text-sm">
+                            {borrower?.whitelisted
+                              ? "Your address is whitelisted"
+                              : "Your address is not whitelisted"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {pool.borrowerRequirements.minCollateral && (
+                      <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+                        <h3 className="font-medium mb-2">Minimum Collateral Required</h3>
+                        <p className="text-sm text-slate-300 mb-3">
+                          This pool requires a minimum collateral value to protect against default risk.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-4 h-4 rounded-full ${
+                              borrower?.collateralValue &&
+                              parseFloat(borrower.collateralValue.replace(/[^0-9.]/g, "")) >=
+                                parseFloat(pool.borrowerRequirements.minCollateral.replace(/[^0-9.]/g, ""))
+                                ? "bg-green-500"
+                                : "bg-red-500"
+                            }`}
+                          ></div>
+                          <p className="text-sm">
+                            Required: {pool.borrowerRequirements.minCollateral} | Your collateral:{" "}
+                            {borrower?.collateralValue || "$0.00"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-center py-8 text-slate-400">
+                    This pool has no specific borrower requirements.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
