@@ -170,7 +170,7 @@ export default function Home() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold">
-              Why Choose <span className="gradient-text">IDRX Lisk Lending</span>
+              Why Choose <span className="gradient-text">Dingdong.loans</span>
             </h2>
             <p className="mt-4 text-xl text-slate-400 max-w-3xl mx-auto">
               Our platform offers the most secure, transparent, and efficient way to lend and borrow digital assets.
