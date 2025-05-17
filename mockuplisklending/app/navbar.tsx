@@ -54,7 +54,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0 flex items-center">
               <span className="text-primary font-bold text-xl lisk-glow-text">IDRX</span>
-              <span className="ml-2 text-white font-medium">Lisk Lending</span>
+              <span className="ml-2 text-white font-medium">Dingdong Loans</span>
             </Link>
             <div className="hidden md:ml-10 md:flex md:space-x-8">
               {navigation.map((item) => (

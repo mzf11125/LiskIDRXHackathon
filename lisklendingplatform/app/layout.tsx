@@ -12,7 +12,7 @@ import AnimatedGradientBackground from "@/components/animated-gradient-backgroun
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "IDRX Lisk Lending Platform",
+  title: "Dingdong Loans",
   description: "Decentralized lending platform on the Lisk blockchain",
   generator: 'v0.dev'
 }
