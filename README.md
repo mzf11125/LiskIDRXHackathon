@@ -15,6 +15,10 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 - **Backend**: [https://github.com/franshel/lending-api/]
 - **Smart Contract**: [https://github.com/Lagxy/Lending-DApps]
 
+### Pitch Deck
+
+- **Pitch deck**: [https://drive.google.com/file/d/19Q9FTtwwjZy2DnKrmcx_mNe3SV7dIkwb/view?usp=sharing]
+
 ### Key Features
 
 - **Lending Pools**: Supply assets to liquidity pools and earn competitive interest rates
