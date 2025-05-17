@@ -43,6 +43,8 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 ## Technology Stack
 
 - **Frontend**: Next.js, React, TypeScript, TailwindCSS
+- **Backend**: FastApi and Python
+- **Smart Contract**: Foundry
 - **Blockchain**: Lisk SDK, IDRX token integration
 - **Authentication**: Xellar Kit for secure wallet connection
 - **State Management**: React Hooks, Context API
@@ -124,7 +126,9 @@ The application can be deployed to any platform supporting Next.js applications,
 - Pelita Bangsa Academy
 - Jason Yapri
 - Leandro
+- Lexy
 - Nicky
 - Cliff
+- Zidan
 - Xellar SDK providers
 - Hackathon organizers and mentors

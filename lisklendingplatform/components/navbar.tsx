@@ -21,6 +21,7 @@ export default function Navbar() {
     { name: "Borrow", href: "/borrow" },
     { name: "Markets", href: "/markets" },
     { name: "Portfolio", href: "/portfolio" },
+    { name: "About", href: "/about" },
   ]
 
   const truncateAddress = (address: string) => {
