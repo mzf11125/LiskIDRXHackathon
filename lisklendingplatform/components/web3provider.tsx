@@ -7,8 +7,8 @@ import { XellarKitProvider, defaultConfig, darkTheme } from "@xellar/kit";
 import { polygonAmoy } from "viem/chains";
 
 // Use the environment variables correctly
-const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "";
-const xellarAppId = process.env.NEXT_PUBLIC_XELLAR_APP_ID || "08e4a3bd-2ecf-4c26-83d4-45f06094d372";
+const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
+const xellarAppId = process.env.NEXT_PUBLIC_XELLAR_APP_ID;
 
 // Log the values to debug (you can remove this in production)
 console.log("WCID:", walletConnectProjectId);

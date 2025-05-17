@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -20,6 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
+import { useProfile } from "@/hooks/use-profile"
+import { useProposals } from "@/hooks/use-proposals"
+import { useWallet } from "@/components/wallet-provider"
 
 const formSchema = z.object({
   companyName: z.string().min(2, {
@@ -101,11 +104,33 @@ export default function CreateProposalForm({ onSuccess }: CreateProposalFormProp
   const [documents, setDocuments] = useState<{ name: string; type: string; size: string }[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true)
+  const [hasProposal, setHasProposal] = useState(false)
+  
+  // Use the hooks we created
+  const { isConnected } = useWallet()
+  const { profile, fetchProfile, isProfileComplete, isLoading: isProfileLoading } = useProfile()
+  const { createProposal, hasExistingProposal, isLoading: isProposalLoading } = useProposals()
+  
+  // Check if profile is complete and if user already has a proposal
+  useEffect(() => {
+    if (isConnected) {
+      const checkUserStatus = async () => {
+        setIsCheckingProfile(true)
+        await fetchProfile()
+        const existingProposal = await hasExistingProposal()
+        setHasProposal(existingProposal)
+        setIsCheckingProfile(false)
+      }
+      
+      checkUserStatus()
+    }
+  }, [isConnected, fetchProfile, hasExistingProposal])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyName: "",
+      companyName: profile?.company_name || "",
       shortDescription: "",
       fullDescription: "",
       businessPlan: "",
@@ -114,25 +139,57 @@ export default function CreateProposalForm({ onSuccess }: CreateProposalFormProp
       targetFunding: "",
       minimumInvestment: "",
       maximumInvestment: "",
-      website: "",
+      website: profile?.company_website || "",
       twitter: "",
       linkedin: "",
       telegram: "",
     },
   })
+  
+  // Update form values when profile is loaded
+  useEffect(() => {
+    if (profile) {
+      form.setValue("companyName", profile.company_name || "")
+      form.setValue("website", profile.company_website || "")
+    }
+  }, [profile, form])
 
-  function onSubmit(values: FormValues) {
-    // In a real app, this would send the data to your API
-    console.log(values)
-    console.log("Documents:", documents)
-    console.log("Tags:", tags)
-
-    toast({
-      title: "Proposal Created",
-      description: "Your business proposal has been submitted successfully.",
-    })
-
-    onSuccess()
+  async function onSubmit(values: FormValues) {
+    if (!isProfileComplete()) {
+      toast({
+        variant: "destructive",
+        title: "Profile Incomplete",
+        description: "Please complete your profile before creating a proposal.",
+      })
+      return
+    }
+    
+    if (hasProposal) {
+      toast({
+        variant: "destructive",
+        title: "Proposal Already Exists",
+        description: "You already have an active proposal. Only one proposal per wallet is allowed.",
+      })
+      return
+    }
+    
+    // Create proposal data
+    const proposalData = {
+      ...values,
+      tags,
+      documents: documents.map(doc => ({
+        title: doc.name,
+        type: doc.type,
+        size: doc.size,
+        url: `https://example.com/${doc.name.replace(/\s+/g, '-').toLowerCase()}`
+      }))
+    }
+    
+    // Submit proposal
+    const result = await createProposal(proposalData)
+    if (result) {
+      onSuccess()
+    }
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,6 +220,48 @@ export default function CreateProposalForm({ onSuccess }: CreateProposalFormProp
 
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag))
+  }
+  
+  // Loading state
+  if (isCheckingProfile) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+  
+  // Profile incomplete warning
+  if (!isProfileComplete()) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-yellow-500 mb-2">Profile Incomplete</h3>
+          <p className="text-slate-300 mb-4">You need to complete your profile before creating a business proposal.</p>
+          <Button onClick={() => window.location.href = "/profile"} className="web3-button">
+            Complete Profile
+          </Button>
+        </div>
+      </div>
+    )
+  }
+  
+  // One proposal per wallet limit warning
+  if (hasProposal) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-blue-500 mb-2">Proposal Limit Reached</h3>
+          <p className="text-slate-300 mb-4">
+            You already have an active proposal. Only one proposal per wallet is allowed.
+            You can view and manage your existing proposal in your portfolio.
+          </p>
+          <Button onClick={() => window.location.href = "/portfolio"} className="web3-button">
+            View My Proposal
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -555,8 +654,19 @@ export default function CreateProposalForm({ onSuccess }: CreateProposalFormProp
           <Button type="button" variant="outline" onClick={onSuccess}>
             Cancel
           </Button>
-          <Button type="submit" className="web3-button">
-            Submit Proposal
+          <Button 
+            type="submit" 
+            className="web3-button"
+            disabled={isProposalLoading}
+          >
+            {isProposalLoading ? (
+              <>
+                <span className="animate-spin mr-2">⟳</span>
+                Submitting...
+              </>
+            ) : (
+              "Submit Proposal"
+            )}
           </Button>
         </div>
       </form>
