@@ -1,62 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { profileAPI } from "@/services/api"
 import { useToast } from "@/components/ui/use-toast"
 
+export type ProfileData = {
+  display_name: string
+  email: string
+  company_name: string
+  company_position: string
+  company_website: string
+  company_description: string
+}
+
 export function useProfile() {
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Fetch user profile
-  const fetchProfile = async () => {
+  // Fetch user profile from the API
+  const fetchProfile = useCallback(async () => {
+    setIsLoading(true)
     try {
-      setIsLoading(true)
-      setError(null)
-      const data = await profileAPI.getMyProfile()
-      setProfile(data)
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch profile")
-      // Don't show toast here as this might be called on initial load
-      // and the user might not have a profile yet
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Update user profile
-  const updateProfile = async (profileData: any) => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const updatedProfile = await profileAPI.updateProfile(profileData)
-      setProfile(updatedProfile)
-
-      toast({
-        title: "Success",
-        description: "Your profile has been updated successfully.",
-      })
-
-      return updatedProfile
-    } catch (err: any) {
-      setError(err.message || "Failed to update profile")
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-      })
+      const profileData = await profileAPI.getMyProfile()
+      setProfile(profileData)
+      return profileData
+    } catch (error) {
+      console.error("Failed to fetch profile:", error)
       return null
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  // Update user profile
+  const updateProfile = useCallback(async (profileData: ProfileData) => {
+    setIsLoading(true)
+    try {
+      const updatedProfile = await profileAPI.updateProfile(profileData)
+      setProfile(updatedProfile)
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated",
+      })
+      
+      return updatedProfile
+    } catch (error: any) {
+      console.error("Failed to update profile:", error)
+      
+      toast({
+        variant: "destructive",
+        title: "Failed to update profile",
+        description: error.message || "An unexpected error occurred. Please try again.",
+      })
+      
+      return null
+    } finally {
+      setIsLoading(false)
+    }
+  }, [toast])
 
   return {
     profile,
     isLoading,
-    error,
     fetchProfile,
     updateProfile,
   }

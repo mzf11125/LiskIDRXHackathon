@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useProfile } from "@/hooks/use-profile"
 import { useWallet } from "@/components/wallet-provider"
 import { useRouter } from "next/navigation"
+import { WalletRiskAnalysis } from "@/components/wallet-risk-analysis"
 
 const profileSchema = z.object({
   display_name: z.string().min(2, {
@@ -99,134 +100,142 @@ export default function ProfilePage() {
     <div className="container mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-8 gradient-text">Your Profile</h1>
 
-      <Card className="web3-card mb-8">
-        <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-          <CardDescription>
-            Complete your profile information to create business proposals and participate in the platform.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="display_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Display Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your name" {...field} className="bg-slate-800 border-slate-700" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="col-span-1 lg:col-span-2">
+          <Card className="web3-card">
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Complete your profile information to create business proposals and participate in the platform.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="display_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Display Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your name" {...field} className="bg-slate-800 border-slate-700" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="your.email@example.com"
-                          {...field}
-                          className="bg-slate-800 border-slate-700"
-                        />
-                      </FormControl>
-                      <FormDescription>We'll never share your email with anyone else.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="your.email@example.com"
+                              {...field}
+                              className="bg-slate-800 border-slate-700"
+                            />
+                          </FormControl>
+                          <FormDescription>We'll never share your email with anyone else.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your company name" {...field} className="bg-slate-800 border-slate-700" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="company_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your company name" {...field} className="bg-slate-800 border-slate-700" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="company_position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Your Position</FormLabel>
-                      <FormControl>
-                        <Input placeholder="CEO, CTO, etc." {...field} className="bg-slate-800 border-slate-700" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="company_position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Your Position</FormLabel>
+                          <FormControl>
+                            <Input placeholder="CEO, CTO, etc." {...field} className="bg-slate-800 border-slate-700" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="company_website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Website</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://yourcompany.com"
-                          {...field}
-                          className="bg-slate-800 border-slate-700"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="company_website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Website</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="https://yourcompany.com"
+                              {...field}
+                              className="bg-slate-800 border-slate-700"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <div className="md:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="company_description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Brief description of your company"
-                            {...field}
-                            className="bg-slate-800 border-slate-700 min-h-[100px]"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+                    <div className="md:col-span-2">
+                      <FormField
+                        control={form.control}
+                        name="company_description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Brief description of your company"
+                                {...field}
+                                className="bg-slate-800 border-slate-700 min-h-[100px]"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-end">
-                <Button type="submit" className="web3-button" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <span className="animate-spin mr-2">⟳</span>
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Profile"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                  <div className="flex justify-end">
+                    <Button type="submit" className="web3-button" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <span className="animate-spin mr-2">⟳</span>
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Profile"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="col-span-1">
+          <WalletRiskAnalysis />
+        </div>
+      </div>
     </div>
   )
 }

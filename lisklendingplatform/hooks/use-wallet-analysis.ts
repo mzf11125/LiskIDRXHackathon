@@ -4,27 +4,42 @@ import { useState } from "react"
 import { walletAPI } from "@/services/api"
 import { useToast } from "@/components/ui/use-toast"
 
+export type WalletAnalysis = {
+  risk_level: 'low' | 'medium' | 'high' | 'unknown'
+  final_score: number
+  factors: {
+    age_score: number
+    balance_score: number
+    transaction_score: number
+    reputation_score: number
+  }
+  recommendation: string
+}
+
 export function useWalletAnalysis() {
-  const [analysis, setAnalysis] = useState<any>(null)
+  const [analysis, setAnalysis] = useState<WalletAnalysis | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Fetch wallet analysis
   const fetchWalletAnalysis = async (walletAddress: string) => {
+    setIsLoading(true)
+    setError(null)
+    
     try {
-      setIsLoading(true)
-      setError(null)
       const data = await walletAPI.getAnalysis(walletAddress)
       setAnalysis(data)
       return data
     } catch (err: any) {
+      console.error("Failed to fetch wallet analysis:", err)
       setError(err.message || "Failed to fetch wallet analysis")
+      
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch wallet analysis. Please try again.",
+        title: "Analysis Error",
+        description: "Unable to retrieve wallet analysis. Please try again later.",
       })
+      
       return null
     } finally {
       setIsLoading(false)

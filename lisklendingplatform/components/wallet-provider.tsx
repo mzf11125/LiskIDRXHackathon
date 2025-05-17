@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, type ReactNode, useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useAccount, useDisconnect, useBalance, useSignMessage } from "wagmi"
 import { authAPI } from "@/services/api"
@@ -11,6 +11,7 @@ type WalletContextType = {
   isConnected: boolean
   balance: string
   isAuthenticating: boolean
+  isAuthenticated: boolean
   connect: () => Promise<void>
   disconnect: () => void
   signMessage: (message: string) => Promise<string>
@@ -21,6 +22,7 @@ const WalletContext = createContext<WalletContextType>({
   isConnected: false,
   balance: "0",
   isAuthenticating: false,
+  isAuthenticated: false,
   connect: async () => {},
   disconnect: () => {},
   signMessage: async () => "",
@@ -30,6 +32,8 @@ export const useWallet = () => useContext(WalletContext)
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast()
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   
   // Use Wagmi hooks from Xellar Kit
   const { address, isConnected } = useAccount()
@@ -40,6 +44,81 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     enabled: !!address,
   })
   const { signMessageAsync } = useSignMessage()
+
+  // Check if user is authenticated on mount or address change
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      if (isConnected && address) {
+        const isAuth = authAPI.isAuthenticated()
+        const storedAddress = localStorage.getItem("wallet_address")
+        
+        // If authenticated but with a different wallet, logout
+        if (isAuth && storedAddress && storedAddress.toLowerCase() !== address.toLowerCase()) {
+          console.log("Wallet address changed, logging out")
+          authAPI.logout()
+          setIsAuthenticated(false)
+          return
+        }
+        
+        setIsAuthenticated(isAuth)
+        
+        // If connected but not authenticated, try to authenticate
+        if (!isAuth) {
+          try {
+            await authenticate()
+          } catch (error) {
+            console.error("Auto-authentication failed:", error)
+          }
+        }
+      } else {
+        setIsAuthenticated(false)
+      }
+    }
+    
+    checkAuthentication()
+  }, [isConnected, address])
+
+  // Authenticate with backend using wallet signature
+  const authenticate = async (): Promise<boolean> => {
+    if (!address) return false
+    
+    setIsAuthenticating(true)
+    try {
+      // Request message to sign from the backend
+      const { message } = await authAPI.requestMessage(address)
+      
+      toast({
+        title: "Signature required",
+        description: "Please sign the message to authenticate",
+      })
+
+      // Sign the message using Wagmi's signMessage
+      const signature = await signMessageAsync({ message })
+
+      // Verify signature with backend
+      const authData = await authAPI.verifySignature(address, message, signature)
+
+      // Save auth token
+      localStorage.setItem("auth_token", authData.access_token)
+      setIsAuthenticated(true)
+
+      toast({
+        title: "Authentication successful",
+        description: "You've been successfully authenticated",
+      })
+      return true
+    } catch (error: any) {
+      console.error("Authentication failed:", error)
+      toast({
+        variant: "destructive",
+        title: "Authentication failed",
+        description: error.message || "Failed to authenticate with your wallet. Please try again.",
+      })
+      return false
+    } finally {
+      setIsAuthenticating(false)
+    }
+  }
 
   // Connect wallet using Xellar modal
   const connect = async () => {
@@ -64,7 +143,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Disconnect wallet
   const disconnect = () => {
     disconnectWallet()
-    localStorage.removeItem("auth_token")
+    authAPI.logout()
+    setIsAuthenticated(false)
 
     toast({
       title: "Wallet disconnected",
@@ -89,7 +169,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         address: address || null,
         isConnected,
         balance: balanceData?.formatted || "0",
-        isAuthenticating: isPending,
+        isAuthenticating: isAuthenticating || isPending,
+        isAuthenticated,
         connect,
         disconnect,
         signMessage,
