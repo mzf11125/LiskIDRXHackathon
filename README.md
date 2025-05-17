@@ -6,6 +6,11 @@ A decentralized lending and borrowing platform built on the Lisk blockchain, ena
 
 IDRX Lending Platform is a decentralized finance (DeFi) application that connects lenders and borrowers in a secure, transparent environment powered by Lisk blockchain technology. The platform enables users to lend their digital assets to earn interest or borrow assets by providing collateral, with special support for the IDRX token.
 
+### Repositories
+
+- **Backend**: [https://github.com/Lagxy/Lending-DApps]
+- **Smart Contract**: [https://github.com/Lagxy/Lending-DApps]
+
 ### Key Features
 
 - **Lending Pools**: Supply assets to liquidity pools and earn competitive interest rates
@@ -49,7 +54,7 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 - **Authentication**: Xellar Kit for secure wallet connection
 - **State Management**: React Hooks, Context API
 - **Styling**: Shadcn UI components, custom animations
-- **Development Tools**: 
+- **Development Tools**:
   - pnpm (package management)
   - TypeScript (type safety)
   - ESLint/Prettier (code quality)
@@ -70,6 +75,7 @@ This creates a trust score for borrowers, enhancing transparency and security fo
 ## Pool Governance
 
 Lending pools include governance mechanisms allowing stakeholders to:
+
 - Vote on interest rate adjustments
 - Propose new collateral assets
 - Set liquidation parameters
@@ -86,17 +92,20 @@ Lending pools include governance mechanisms allowing stakeholders to:
 ### Installation
 
 1. Clone the repository
+
 ```bash
 git clone https://github.com/yourusername/LiskIDRXHackathon.git
 cd LiskIDRXHackathon/lisklendingplatform
 ```
 
 2. Install dependencies
+
 ```bash
 pnpm install
 ```
 
 3. Run the development server
+
 ```bash
 pnpm dev
 ```
@@ -106,6 +115,7 @@ pnpm dev
 ## Deployment
 
 The application can be deployed to any platform supporting Next.js applications, such as:
+
 - Vercel
 - Netlify
 - AWS Amplify
