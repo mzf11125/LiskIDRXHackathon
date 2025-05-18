@@ -105,6 +105,12 @@ function WalletStateController({ children }: { children: ReactNode }) {
 		process.env.NEXT_PUBLIC_API_URL || "https://api.dingdong.loans";
 
 	const signAuthMessage = async () => {
+		// Check if access token already exists
+		const existingToken = localStorage.getItem("access_token");
+		if (existingToken) {
+			console.log("Access token already exists");
+			return;
+		}
 		try {
 			const response = await axios.post(
 				`${baseUrl}/auth/request-message`,
@@ -127,7 +133,7 @@ function WalletStateController({ children }: { children: ReactNode }) {
 
 			const { access_token } = signatureResponse.data;
 			console.log("Access token received:", access_token);
-
+			localStorage.setItem("access_token", access_token);
 			console.log("Message signed successfully:", signature);
 		} catch (error) {
 			console.error("Error requesting or signing message:", error);
