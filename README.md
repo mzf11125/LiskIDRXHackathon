@@ -79,15 +79,6 @@ The platform features an AI-powered wallet analysis system that evaluates:
 
 This creates a trust score for borrowers, enhancing transparency and security for lenders.
 
-## Pool Governance
-
-Lending pools include governance mechanisms allowing stakeholders to:
-
-- Vote on interest rate adjustments
-- Propose new collateral assets
-- Set liquidation parameters
-- Allocate platform fees
-
 ## Getting Started
 
 ### Prerequisites
