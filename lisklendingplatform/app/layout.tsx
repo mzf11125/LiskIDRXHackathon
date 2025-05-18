@@ -1,32 +1,38 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import Navbar from "@/components/navbar"
-import { WalletProvider } from "@/components/wallet-provider"
-import { Web3Provider } from "@/components/web3provider"
-import ParticleBackground from "@/components/particle-background"
-import AnimatedGradientBackground from "@/components/animated-gradient-background"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import Navbar from "@/components/navbar";
+import { WalletProvider } from "@/components/wallet-provider";
+import { XellarAppProvider } from "@/components/xellar-provider";
+import ParticleBackground from "@/components/particle-background";
+import AnimatedGradientBackground from "@/components/animated-gradient-background";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Dingdong Loans",
   description: "Decentralized lending platform on the Lisk blockchain",
-  generator: 'v0.dev'
-}
+  generator: "v0.dev",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} text-white`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <Web3Provider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {" "}
+          <XellarAppProvider>
             <WalletProvider>
               <div className="min-h-screen flex flex-col relative">
                 <AnimatedGradientBackground />
@@ -36,15 +42,16 @@ export default function RootLayout({
                 <footer className="border-t border-slate-800/30 py-6 px-4 md:px-8 backdrop-blur-sm">
                   <div className="container mx-auto">
                     <p className="text-center text-sm text-slate-500">
-                      © {new Date().getFullYear()} IDRX Lisk Lending Platform. All rights reserved.
+                      © {new Date().getFullYear()} IDRX Lisk Lending Platform.
+                      All rights reserved.
                     </p>
                   </div>
                 </footer>
               </div>
             </WalletProvider>
-          </Web3Provider>
+          </XellarAppProvider>
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

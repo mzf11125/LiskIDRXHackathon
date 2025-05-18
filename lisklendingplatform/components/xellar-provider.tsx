@@ -1,59 +1,75 @@
-"use client"
+"use client";
 
-import { type ReactNode, createContext, useContext, useState } from "react"
+import type { ReactNode } from "react";
+import { XellarProvider } from "@xellar/kit";
+import { configureChains, createConfig, WagmiConfig } from "wagmi";
+import { sepolia } from "wagmi/chains";
+import { jsonRpcProvider } from "wagmi/providers/jsonRpc";
 
-// Context to expose Web3 functionality throughout the app
-export const Web3Context = createContext<{
-  address: string | null
-  isConnected: boolean
-  balance: string
-  connect: () => Promise<void>
-  disconnect: () => void
-}>({
-  address: null,
-  isConnected: false,
-  balance: "0",
-  connect: async () => {},
-  disconnect: () => {},
-})
+// Custom chain configuration for Lisk Sepolia
+const liskSepolia = {
+  ...sepolia,
+  id: 4202, // Lisk Sepolia chain ID
+  name: "Lisk Sepolia",
+  network: "lisk-sepolia",
+  nativeCurrency: {
+    name: "Sepolia Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://lisk-sepolia.huostarter.io"],
+    },
+    public: {
+      http: ["https://lisk-sepolia.huostarter.io"],
+    },
+  },
+  blockExplorers: {
+    etherscan: { name: "Sepolia", url: "https://sepolia.etherscan.io" },
+    default: { name: "Sepolia", url: "https://sepolia.etherscan.io" },
+  },
+};
 
-// Hook to use the Web3 context
-export const useWeb3 = () => useContext(Web3Context)
+// Configure chains and providers
+const { chains, publicClient } = configureChains(
+  [liskSepolia],
+  [
+    jsonRpcProvider({
+      rpc: (chain) => ({
+        http: chain.rpcUrls.default.http[0],
+      }),
+    }),
+  ]
+);
 
-// Main provider component that wraps the app
-export function Web3Provider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState("0")
-  const isConnected = !!address
+// Create wagmi config
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  publicClient,
+});
 
-  // Mock connect function for preview
-  const connect = async () => {
-    try {
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+// Get project ID from env
+const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "";
 
-      // Set mock address and balance
-      setAddress("lsk1234567890abcdefghijklmnopqrstuvwxyz")
-      setBalance("1000.00")
-
-      console.log("Mock wallet connected successfully")
-    } catch (error) {
-      console.error("Failed to connect wallet:", error)
-    }
-  }
-
-  // Mock disconnect function for preview
-  const disconnect = () => {
-    setAddress(null)
-    setBalance("0")
-    console.log("Mock wallet disconnected")
-  }
-
+// Main XellarProvider component that wraps the app
+export function XellarAppProvider({ children }: { children: ReactNode }) {
   return (
-    <Web3Context.Provider value={{ address, isConnected, balance, connect, disconnect }}>
-      {children}
-    </Web3Context.Provider>
-  )
+    <WagmiConfig config={wagmiConfig}>
+      <XellarProvider
+        projectId={projectId}
+        chains={chains}
+        metadata={{
+          name: "DINGDONG.loans Lending Platform",
+          description: "Decentralized lending platform on Lisk",
+          url: "https://dingdong.loans",
+          icons: ["https://dingdong.loans/favicon.ico"],
+        }}
+      >
+        {children}
+      </XellarProvider>
+    </WagmiConfig>
+  );
 }
 
 // Note: In a production environment, you would replace this with the actual Xellar implementation

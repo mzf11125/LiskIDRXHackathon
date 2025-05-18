@@ -1,5 +1,5 @@
-"use client"
-  
+"use client";
+
 import React from "react";
 import { Config, WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +7,8 @@ import { XellarKitProvider, defaultConfig, darkTheme } from "@xellar/kit";
 import { polygonAmoy } from "viem/chains";
 
 // Use the environment variables correctly
-const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
+const walletConnectProjectId =
+  process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
 const xellarAppId = process.env.NEXT_PUBLIC_XELLAR_APP_ID;
 
 // Log the values to debug (you can remove this in production)

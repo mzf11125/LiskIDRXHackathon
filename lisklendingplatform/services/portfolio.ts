@@ -267,8 +267,9 @@ export const portfolioService = {
     walletAddress: string
   ): Promise<WalletAnalysis | null> => {
     try {
+      // Use the correct endpoint: /wallet/analyze/{walletAddress}
       const response = await api.get<RawWalletAnalysisData>(
-        `/wallet/${walletAddress}`
+        `/wallet/analyze/${walletAddress}`
       );
 
       if (!response.success || !response.data) {
