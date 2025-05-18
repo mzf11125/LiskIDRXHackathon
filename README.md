@@ -25,7 +25,6 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 - **Borrowing**: Borrow crypto by providing collateral with transparent terms
 - **Business Funding**: Create and invest in business proposals with detailed risk analysis
 - **AI-Powered Risk Assessment**: Advanced wallet analysis to evaluate borrower creditworthiness
-- **Pool Governance**: Participate in governance voting for lending pool parameters
 - **Multi-asset Support**: Support for multiple cryptocurrencies including IDRX, LSK, and many more
 
 ## How the App Works
