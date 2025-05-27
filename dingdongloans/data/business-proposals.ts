@@ -1,390 +1,114 @@
-import type { BusinessProposal } from "@/types/business-proposal"
+import type { BusinessProposal } from "@/types/business-proposal";
+import { api } from "@/hooks/use-axios";
 
-export const businessProposals: BusinessProposal[] = [
-  {
-    id: "prop-001",
-    companyName: "TechNova Solutions",
-    logo: "/placeholder.svg?height=100&width=100",
-    acceptedToken: "BTC",
-    totalPooled: "5.8 BTC",
-    shortDescription: "AI-powered supply chain optimization platform for manufacturing",
-    fullDescription:
-      "TechNova Solutions is developing an AI-powered supply chain optimization platform that helps manufacturing companies reduce costs, minimize delays, and improve efficiency. Our solution uses machine learning algorithms to analyze historical data, predict potential disruptions, and recommend optimal inventory levels and supplier selections.",
-    businessPlan:
-      "Our business model is based on a SaaS subscription with tiered pricing based on company size and usage. We've already secured pilot programs with three mid-sized manufacturing companies and are seeking funding to expand our development team and accelerate our go-to-market strategy.",
-    expectedReturn: "18-22% APY",
-    duration: "24 months",
-    minimumInvestment: "0.1 BTC",
-    maximumInvestment: "1.0 BTC",
-    proposerWallet: "lsk7823459abcdefghijklmnopqrstuvwxyz",
-    proposedAt: "2023-12-15",
-    deadline: "2023-06-30",
-    status: "active",
-    currentFunding: "3.2 BTC",
-    targetFunding: "10 BTC",
-    investorCount: 12,
-    walletAnalysis: {
-      trustScore: 85,
-      activityLevel: "high",
-      accountAge: "3 years, 2 months",
-      previousProposals: 2,
-      successfulProposals: 2,
-      riskLevel: "low",
-      verificationStatus: "verified",
-      comments: [
-        "Consistent transaction history",
-        "Previously funded projects have met milestones",
-        "Connected to verified business entity",
-      ],
-    },
-    documents: [
-      {
-        id: "doc-001",
-        title: "Business Plan",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-15",
-        size: "2.4 MB",
-      },
-      {
-        id: "doc-002",
-        title: "Financial Projections",
-        type: "spreadsheet",
-        url: "#",
-        uploadedAt: "2023-12-15",
-        size: "1.8 MB",
-      },
-      {
-        id: "doc-003",
-        title: "Technical Whitepaper",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-16",
-        size: "3.5 MB",
-      },
-      {
-        id: "doc-004",
-        title: "Team Credentials",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-17",
-        size: "1.2 MB",
-      },
-    ],
-    tags: ["AI", "Supply Chain", "SaaS", "Manufacturing"],
-    website: "https://technova.example.com",
-    socialMedia: {
-      twitter: "https://twitter.com/technova",
-      linkedin: "https://linkedin.com/company/technova",
-    },
-  },
-  {
-    id: "prop-002",
-    companyName: "GreenEnergy Finance",
-    logo: "/placeholder.svg?height=100&width=100",
-    acceptedToken: "IDRX",
-    totalPooled: "250,000 IDRX",
-    shortDescription: "Funding for solar energy projects in developing countries",
-    fullDescription:
-      "GreenEnergy Finance is a social impact company focused on bringing renewable energy solutions to underserved communities in developing countries. We finance and implement solar energy projects that provide clean electricity to communities, schools, and healthcare facilities that currently rely on expensive and polluting diesel generators.",
-    businessPlan:
-      "We operate on a hybrid model combining impact investing with sustainable business practices. Local communities pay affordable rates for electricity, which generates steady returns for investors while creating significant social and environmental benefits. We've successfully completed projects in 5 countries and are looking to expand to 10 more locations.",
-    expectedReturn: "12-15% APY",
-    duration: "36 months",
-    minimumInvestment: "5,000 IDRX",
-    maximumInvestment: "50,000 IDRX",
-    proposerWallet: "lsk9876543210abcdefghijklmnopqrstuvwxyz",
-    proposedAt: "2023-11-20",
-    deadline: "2023-07-15",
-    status: "active",
-    currentFunding: "150,000 IDRX",
-    targetFunding: "500,000 IDRX",
-    investorCount: 18,
-    walletAnalysis: {
-      trustScore: 92,
-      activityLevel: "high",
-      accountAge: "4 years, 7 months",
-      previousProposals: 5,
-      successfulProposals: 5,
-      riskLevel: "low",
-      verificationStatus: "verified",
-      comments: [
-        "Strong history of successful projects",
-        "Transparent reporting on previous funding",
-        "Multiple verified partnerships with NGOs",
-        "Regular dividend payments to previous investors",
-      ],
-    },
-    documents: [
-      {
-        id: "doc-005",
-        title: "Impact Report",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-11-20",
-        size: "4.2 MB",
-      },
-      {
-        id: "doc-006",
-        title: "Project Portfolio",
-        type: "presentation",
-        url: "#",
-        uploadedAt: "2023-11-21",
-        size: "8.5 MB",
-      },
-      {
-        id: "doc-007",
-        title: "Financial Statements",
-        type: "spreadsheet",
-        url: "#",
-        uploadedAt: "2023-11-22",
-        size: "1.6 MB",
-      },
-      {
-        id: "doc-008",
-        title: "Legal Documentation",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-11-23",
-        size: "2.8 MB",
-      },
-    ],
-    tags: ["Renewable Energy", "Social Impact", "Sustainability", "Solar"],
-    website: "https://greenenergy.example.com",
-    socialMedia: {
-      twitter: "https://twitter.com/greenenergy",
-      linkedin: "https://linkedin.com/company/greenenergy",
-      telegram: "https://t.me/greenenergy",
-    },
-  },
-  {
-    id: "prop-003",
-    companyName: "CryptoSecure Insurance",
-    logo: "/placeholder.svg?height=100&width=100",
-    acceptedToken: "ETH",
-    totalPooled: "45 ETH",
-    shortDescription: "Decentralized insurance protocol for crypto assets",
-    fullDescription:
-      "CryptoSecure Insurance is building a decentralized insurance protocol that protects crypto assets against hacks, exploits, and other risks. Our platform uses smart contracts to automate claims processing and risk assessment, providing transparent and efficient insurance services for DeFi users and protocols.",
-    businessPlan:
-      "Our revenue comes from premium payments and a percentage of investment returns generated from the insurance pool. The capital provided by lenders forms the foundation of our insurance reserves, which are invested in low-risk yield strategies. We've already partnered with several DeFi protocols to offer coverage for their users.",
-    expectedReturn: "15-18% APY",
-    duration: "12 months",
-    minimumInvestment: "1 ETH",
-    maximumInvestment: "10 ETH",
-    proposerWallet: "lsk1357924680abcdefghijklmnopqrstuvwxyz",
-    proposedAt: "2023-12-05",
-    deadline: "2023-06-15",
-    status: "active",
-    currentFunding: "45 ETH",
-    targetFunding: "100 ETH",
-    investorCount: 22,
-    walletAnalysis: {
-      trustScore: 78,
-      activityLevel: "medium",
-      accountAge: "2 years, 5 months",
-      previousProposals: 1,
-      successfulProposals: 1,
-      riskLevel: "medium",
-      verificationStatus: "verified",
-      comments: [
-        "Active in DeFi ecosystem",
-        "Team has strong technical background",
-        "Previous project delivered on time",
-        "Some team members use pseudonyms",
-      ],
-    },
-    documents: [
-      {
-        id: "doc-009",
-        title: "Technical Whitepaper",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-05",
-        size: "5.1 MB",
-      },
-      {
-        id: "doc-010",
-        title: "Risk Assessment Model",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-06",
-        size: "2.3 MB",
-      },
-      {
-        id: "doc-011",
-        title: "Smart Contract Audit",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-07",
-        size: "1.9 MB",
-      },
-    ],
-    tags: ["Insurance", "DeFi", "Smart Contracts", "Risk Management"],
-    website: "https://cryptosecure.example.com",
-    socialMedia: {
-      twitter: "https://twitter.com/cryptosecure",
-      telegram: "https://t.me/cryptosecure",
-    },
-  },
-  {
-    id: "prop-004",
-    companyName: "AgriChain",
-    logo: "/placeholder.svg?height=100&width=100",
-    acceptedToken: "LSK",
-    totalPooled: "75,000 LSK",
-    shortDescription: "Blockchain-based supply chain solution for agricultural products",
-    fullDescription:
-      "AgriChain is revolutionizing agricultural supply chains by implementing blockchain technology to track products from farm to table. Our platform ensures transparency, reduces waste, and enables fair pricing for farmers while providing consumers with verified information about the origin and quality of their food.",
-    businessPlan:
-      "We charge subscription fees from supply chain participants and additional fees for premium features like detailed analytics and integration with existing systems. We're currently working with three agricultural cooperatives representing over 500 farmers and are in discussions with several major food retailers.",
-    expectedReturn: "14-16% APY",
-    duration: "24 months",
-    minimumInvestment: "1,000 LSK",
-    maximumInvestment: "20,000 LSK",
-    proposerWallet: "lsk2468013579abcdefghijklmnopqrstuvwxyz",
-    proposedAt: "2023-12-10",
-    deadline: "2023-07-01",
-    status: "active",
-    currentFunding: "75,000 LSK",
-    targetFunding: "200,000 LSK",
-    investorCount: 15,
-    walletAnalysis: {
-      trustScore: 81,
-      activityLevel: "medium",
-      accountAge: "3 years, 1 month",
-      previousProposals: 0,
-      successfulProposals: 0,
-      riskLevel: "medium",
-      verificationStatus: "verified",
-      comments: [
-        "First-time proposer but established company",
-        "Strong team with agricultural expertise",
-        "Verified partnerships with agricultural cooperatives",
-        "Consistent transaction history",
-      ],
-    },
-    documents: [
-      {
-        id: "doc-012",
-        title: "Business Plan",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-10",
-        size: "3.7 MB",
-      },
-      {
-        id: "doc-013",
-        title: "Market Analysis",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-11",
-        size: "2.2 MB",
-      },
-      {
-        id: "doc-014",
-        title: "Technical Architecture",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-12",
-        size: "1.8 MB",
-      },
-      {
-        id: "doc-015",
-        title: "Partnership Agreements",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-12-13",
-        size: "4.5 MB",
-      },
-    ],
-    tags: ["Agriculture", "Supply Chain", "Blockchain", "Sustainability"],
-    website: "https://agrichain.example.com",
-    socialMedia: {
-      twitter: "https://twitter.com/agrichain",
-      linkedin: "https://linkedin.com/company/agrichain",
-    },
-  },
-  {
-    id: "prop-005",
-    companyName: "MetaVerse Realty",
-    logo: "/placeholder.svg?height=100&width=100",
-    acceptedToken: "BTC",
-    totalPooled: "3.2 BTC",
-    shortDescription: "Virtual real estate development and management in the metaverse",
-    fullDescription:
-      "MetaVerse Realty specializes in acquiring, developing, and managing virtual real estate across popular metaverse platforms. We create value through strategic acquisitions, development of virtual venues for events and commerce, and leasing space to brands and creators looking to establish a presence in the metaverse.",
-    businessPlan:
-      "Our revenue streams include capital appreciation of virtual land holdings, development fees, rental income from virtual properties, and event hosting fees. We've already acquired prime locations in three major metaverse platforms and have completed development projects that are generating steady rental income.",
-    expectedReturn: "20-25% APY",
-    duration: "18 months",
-    minimumInvestment: "0.05 BTC",
-    maximumInvestment: "1.5 BTC",
-    proposerWallet: "lsk3692581470abcdefghijklmnopqrstuvwxyz",
-    proposedAt: "2023-11-25",
-    deadline: "2023-06-25",
-    status: "active",
-    currentFunding: "3.2 BTC",
-    targetFunding: "8 BTC",
-    investorCount: 28,
-    walletAnalysis: {
-      trustScore: 72,
-      activityLevel: "high",
-      accountAge: "1 year, 8 months",
-      previousProposals: 1,
-      successfulProposals: 0,
-      riskLevel: "high",
-      verificationStatus: "unverified",
-      comments: [
-        "Active in NFT and metaverse transactions",
-        "Previous proposal did not reach funding goal",
-        "Team uses pseudonyms for privacy",
-        "High transaction volume but relatively new account",
-      ],
-    },
-    documents: [
-      {
-        id: "doc-016",
-        title: "Investment Prospectus",
-        type: "pdf",
-        url: "#",
-        uploadedAt: "2023-11-25",
-        size: "6.3 MB",
-      },
-      {
-        id: "doc-017",
-        title: "Portfolio of Properties",
-        type: "presentation",
-        url: "#",
-        uploadedAt: "2023-11-26",
-        size: "12.5 MB",
-      },
-      {
-        id: "doc-018",
-        title: "Revenue Projections",
-        type: "spreadsheet",
-        url: "#",
-        uploadedAt: "2023-11-27",
-        size: "1.4 MB",
-      },
-    ],
-    tags: ["Metaverse", "Virtual Real Estate", "NFT", "Digital Assets"],
-    website: "https://metaverserealty.example.com",
-    socialMedia: {
-      twitter: "https://twitter.com/metaverserealty",
-      telegram: "https://t.me/metaverserealty",
-    },
-  },
-]
+// Function to fetch business proposals from the API
+export const fetchBusinessProposals = async (
+	skip = 0,
+	limit = 20
+): Promise<BusinessProposal[]> => {
+	try {
+		const { data } = await api.get(
+			`/proposals/?skip=${skip}&limit=${limit}`
+		);
 
-export const getBusinessProposalById = (id: string): BusinessProposal | undefined => {
-  return businessProposals.find((proposal) => proposal.id === id)
-}
+		// Convert snake_case to camelCase
+		return data.proposals.map((proposal: any) => ({
+			id: proposal.id,
+			company_name: proposal.company_name,
+			logo: proposal.logo,
+			accepted_token: proposal.accepted_token,
+			total_pooled: proposal.total_pooled,
+			short_description: proposal.short_description,
+			full_description: proposal.full_description,
+			business_plan: proposal.business_plan,
+			expected_return: proposal.expected_return,
+			duration: proposal.duration,
+			minimum_investment: proposal.minimum_investment,
+			maximum_investment: proposal.maximum_investment,
+			proposer_wallet: proposal.proposer_wallet,
+			proposed_at: proposal.proposed_at,
+			deadline: proposal.deadline,
+			status: proposal.status,
+			current_funding: proposal.current_funding,
+			target_funding: proposal.target_funding,
+			investor_count: proposal.investor_count,
+			website: proposal.website,
+			social_media: proposal.social_media,
+			documents: proposal.documents.map((doc: any) => ({
+				id: doc.id,
+				proposal_id: doc.proposal_id,
+				title: doc.title,
+				type: doc.type,
+				url: doc.url,
+				uploaded_at: doc.uploaded_at,
+				created_at: doc.created_at,
+				updated_at: doc.updated_at,
+				size: doc.size,
+			})),
+			wallet_analysis: proposal.wallet_analysis,
+			created_at: proposal.created_at,
+			updated_at: proposal.updated_at,
+			tags: proposal.tags,
+		}));
+	} catch (error) {
+		console.error("Error fetching business proposals:", error);
+		return [];
+	}
+};
 
-export const getBusinessProposalsByToken = (token: string): BusinessProposal[] => {
-  return businessProposals.filter((proposal) => proposal.acceptedToken === token)
-}
+export const getBusinessProposalById = async (
+	id: string
+): Promise<BusinessProposal | undefined> => {
+	try {
+		const { data } = await api.get(`/proposals/${id}`);
+		const proposal = data.proposal;
 
-export const getActiveBusinessProposals = (): BusinessProposal[] => {
-  return businessProposals.filter((proposal) => proposal.status === "active")
-}
+		// Convert to our type
+		return {
+			id: proposal.id,
+			company_name: proposal.company_name,
+			logo: proposal.logo,
+			accepted_token: proposal.accepted_token,
+			total_pooled: proposal.total_pooled,
+			short_description: proposal.short_description,
+			full_description: proposal.full_description,
+			business_plan: proposal.business_plan,
+			expected_return: proposal.expected_return,
+			duration: proposal.duration,
+			minimum_investment: proposal.minimum_investment,
+			maximum_investment: proposal.maximum_investment,
+			proposer_wallet: proposal.proposer_wallet,
+			proposed_at: proposal.proposed_at,
+			deadline: proposal.deadline,
+			status: proposal.status,
+			current_funding: proposal.current_funding,
+			target_funding: proposal.target_funding,
+			investor_count: proposal.investor_count,
+			website: proposal.website,
+			social_media: proposal.social_media,
+			documents: proposal.documents.map((doc: any) => ({
+				id: doc.id,
+				proposal_id: doc.proposal_id,
+				title: doc.title,
+				type: doc.type,
+				url: doc.url,
+				uploaded_at: doc.uploaded_at,
+				created_at: doc.created_at,
+				updated_at: doc.updated_at,
+				size: doc.size,
+			})),
+			wallet_analysis: proposal.wallet_analysis,
+			created_at: proposal.created_at,
+			updated_at: proposal.updated_at,
+			tags: proposal.tags,
+		};
+	} catch (error) {
+		console.error("Error fetching business proposal:", error);
+		return undefined;
+	}
+};
+
+// export const getActiveBusinessProposals = async (): Promise<BusinessProposal[]> => {
+//   const proposals = await fetchBusinessProposals();
+//   return proposals.filter((proposal) => proposal.status === "active");
+// };
