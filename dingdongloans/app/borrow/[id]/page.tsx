@@ -1,3 +1,4 @@
+import type { BusinessProposal } from "@/types/business-proposal";
 import {
 	businessProposals,
 	getBusinessProposalById,
@@ -5,7 +6,7 @@ import {
 import BusinessProposalClientPage from "./client-page";
 
 export async function generateStaticParams() {
-	return businessProposals.map((proposal: any) => ({
+	return businessProposals.map((proposal: BusinessProposal) => ({
 		id: proposal.id,
 	}));
 }
