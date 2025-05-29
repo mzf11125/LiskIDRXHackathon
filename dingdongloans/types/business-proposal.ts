@@ -68,7 +68,6 @@ export type BusinessProposal = {
 	full_description: string;
 	business_plan: string;
 	expected_return: string;
-	duration: string;
 	minimum_investment: string;
 	maximum_investment: string;
 	proposer_wallet: string;

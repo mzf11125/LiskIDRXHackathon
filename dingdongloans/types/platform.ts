@@ -6,14 +6,15 @@ export type AssetType = {
   icon?: string
   price: string
   apr?: string
-  apr?: string
+  supplyApr?: string
   walletBalance?: string
   available?: string
+  supplied?: string
   collateralFactor?: string
   borrowLimit?: string
   liquidationThreshold?: string
-  borrowEnabled?: boolean
   supplyEnabled?: boolean
+  borrowEnabled?: boolean
 }
 
 export type ProposalType = {
@@ -58,4 +59,24 @@ export type BorrowerType = {
   collateralValue: string
   borrowLimit: string
   eligiblePools: string[] // IDs of pools the borrower is eligible for
+}
+
+export type SupplyTransactionType = {
+  id: string
+  poolId: string
+  asset: string
+  amount: string
+  supplyApr: string
+  timestamp: string
+  txHash?: string
+  status: "pending" | "completed" | "failed"
+}
+
+export type UserSupplyType = {
+  poolId: string
+  asset: string
+  suppliedAmount: string
+  earnedInterest: string
+  currentApr: string
+  canWithdraw: boolean
 }

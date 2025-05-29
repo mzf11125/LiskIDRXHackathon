@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, AlertCircle, X, Check } from "lucide-react";
+import {
+	ArrowLeft,
+	AlertCircle,
+	X,
+	Check,
+	Plus,
+	TrendingUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -20,8 +27,20 @@ import {
 	getPoolById,
 	getAvailableAssetsForBorrower,
 	getBorrowerByAddress,
+	getUserSuppliesForPool,
 } from "@/data/mock-data";
-import { Pool } from "@/types/lending";
+import { PoolType } from "@/types/platform";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PoolDetailClientProps {
 	params: { id: string };
@@ -34,7 +53,15 @@ export default function PoolDetailClient({
 }: PoolDetailClientProps) {
 	const router = useRouter();
 	const { isConnected, connect, address } = useWallet();
+	const { toast } = useToast();
 	const [activeTab, setActiveTab] = useState("overview");
+
+	// Supply-related state
+	const [isSupplyDialogOpen, setIsSupplyDialogOpen] = useState(false);
+	const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+	const [selectedAsset, setSelectedAsset] = useState<any>(null);
+	const [supplyAmount, setSupplyAmount] = useState("");
+	const [withdrawAmount, setWithdrawAmount] = useState("");
 
 	// Get borrower data
 	const borrower = address ? getBorrowerByAddress(address) : undefined;
@@ -44,8 +71,73 @@ export default function PoolDetailClient({
 		? getAvailableAssetsForBorrower(address, params.id)
 		: [];
 
+	// Get user supplies for this pool
+	const userSupplies = getUserSuppliesForPool(params.id);
+
 	// Check if borrower is eligible for this pool
 	const isEligible = borrower?.eligiblePools.includes(params.id) || false;
+
+	const handleSupplySubmit = () => {
+		if (!supplyAmount || Number.parseFloat(supplyAmount) <= 0) {
+			toast({
+				variant: "destructive",
+				title: "Invalid amount",
+				description: "Please enter a valid amount to supply.",
+			});
+			return;
+		}
+
+		const amount = Number.parseFloat(supplyAmount);
+		const walletBalance = Number.parseFloat(
+			selectedAsset.walletBalance.replace(/,/g, "")
+		);
+
+		if (amount > walletBalance) {
+			toast({
+				variant: "destructive",
+				title: "Insufficient balance",
+				description: `You don't have enough ${selectedAsset.symbol} in your wallet.`,
+			});
+			return;
+		}
+
+		toast({
+			title: "Supply successful",
+			description: `You have successfully supplied ${supplyAmount} ${selectedAsset.symbol} to the pool.`,
+		});
+		setIsSupplyDialogOpen(false);
+		setSupplyAmount("");
+		setSelectedAsset(null);
+	};
+
+	const handleWithdrawSubmit = () => {
+		if (!withdrawAmount || Number.parseFloat(withdrawAmount) <= 0) {
+			toast({
+				variant: "destructive",
+				title: "Invalid amount",
+				description: "Please enter a valid amount to withdraw.",
+			});
+			return;
+		}
+
+		toast({
+			title: "Withdrawal successful",
+			description: `You have successfully withdrawn ${withdrawAmount} ${selectedAsset.symbol} from the pool.`,
+		});
+		setIsWithdrawDialogOpen(false);
+		setWithdrawAmount("");
+		setSelectedAsset(null);
+	};
+
+	const openSupplyDialog = (asset: any) => {
+		setSelectedAsset(asset);
+		setIsSupplyDialogOpen(true);
+	};
+
+	const openWithdrawDialog = (asset: any) => {
+		setSelectedAsset(asset);
+		setIsWithdrawDialogOpen(true);
+	};
 
 	if (!initialPool) {
 		return (
@@ -294,8 +386,9 @@ export default function PoolDetailClient({
 				onValueChange={setActiveTab}
 				className="space-y-8"
 			>
-				<TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-4 bg-slate-800/50">
+				<TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-5 bg-slate-800/50">
 					<TabsTrigger value="overview">Overview</TabsTrigger>
+					<TabsTrigger value="supply">Supply</TabsTrigger>
 					<TabsTrigger value="assets">Assets</TabsTrigger>
 					<TabsTrigger value="proposals">Proposals</TabsTrigger>
 					<TabsTrigger value="requirements">Requirements</TabsTrigger>
@@ -423,6 +516,149 @@ export default function PoolDetailClient({
 							</div>
 						</CardContent>
 					</Card>
+				</TabsContent>
+
+				<TabsContent value="supply" className="space-y-6">
+					<div className="grid md:grid-cols-2 gap-6">
+						<Card className="web3-card">
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<Plus className="h-5 w-5" />
+									Supply Assets
+								</CardTitle>
+								<CardDescription>
+									Supply assets to earn interest and help provide liquidity to the pool
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<div className="space-y-4">
+									{pool.assets
+										.filter((asset) => asset.supplyEnabled)
+										.map((asset) => (
+											<div
+												key={asset.symbol}
+												className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
+											>
+												<div className="flex items-center justify-between mb-3">
+													<div className="flex items-center gap-3">
+														<div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+															{asset.symbol.charAt(0)}
+														</div>
+														<div>
+															<p className="font-medium">
+																{asset.symbol}
+															</p>
+															<p className="text-xs text-slate-400">
+																{asset.name}
+															</p>
+														</div>
+													</div>
+													<div className="text-right">
+														<p className="text-sm font-medium text-primary">
+															{asset.supplyApr} APR
+														</p>
+														<p className="text-xs text-slate-400">
+															Wallet: {asset.walletBalance}
+														</p>
+													</div>
+												</div>
+												<div className="flex gap-2">
+													<Button
+														onClick={() => openSupplyDialog(asset)}
+														className="flex-1 web3-button"
+														size="sm"
+													>
+														Supply {asset.symbol}
+													</Button>
+												</div>
+											</div>
+										))}
+								</div>
+							</CardContent>
+						</Card>
+
+						<Card className="web3-card">
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<TrendingUp className="h-5 w-5" />
+									Your Supplies
+								</CardTitle>
+								<CardDescription>
+									Manage your supplied assets and track earnings
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<div className="space-y-4">
+									{userSupplies.length === 0 ? (
+										<p className="text-slate-400 text-center py-8">
+											You haven't supplied any assets to this pool yet.
+										</p>
+									) : (
+										userSupplies.map((supply) => (
+											<div
+												key={supply.asset}
+												className="bg-slate-800/50 p-4 rounded-lg border border-slate-700"
+											>
+												<div className="flex items-center justify-between mb-3">
+													<div className="flex items-center gap-3">
+														<div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+															{supply.asset.charAt(0)}
+														</div>
+														<div>
+															<p className="font-medium">
+																{supply.asset}
+															</p>
+															<p className="text-xs text-slate-400">
+																Supplied:{" "}
+																{supply.suppliedAmount}
+															</p>
+														</div>
+													</div>
+													<div className="text-right">
+														<p className="text-sm font-medium text-green-500">
+															+{supply.earnedInterest}
+														</p>
+														<p className="text-xs text-slate-400">
+															{supply.currentApr} APR
+														</p>
+													</div>
+												</div>
+												<div className="flex gap-2">
+													<Button
+														onClick={() => {
+															const asset = pool.assets.find(
+																(a) => a.symbol === supply.asset
+															);
+															if (asset) openSupplyDialog(asset);
+														}}
+														variant="outline"
+														className="flex-1"
+														size="sm"
+													>
+														Supply More
+													</Button>
+													<Button
+														onClick={() => {
+															const asset = pool.assets.find(
+																(a) => a.symbol === supply.asset
+															);
+															if (asset) openWithdrawDialog(asset);
+														}}
+														variant="outline"
+														className="flex-1"
+														size="sm"
+														disabled={!supply.canWithdraw}
+													>
+														Withdraw
+													</Button>
+												</div>
+											</div>
+										))
+									)}
+								</div>
+							</CardContent>
+						</Card>
+					</div>
 				</TabsContent>
 
 				<TabsContent value="assets" className="space-y-6">
@@ -677,6 +913,207 @@ export default function PoolDetailClient({
 					</Card>
 				</TabsContent>
 			</Tabs>
+
+			{/* Supply Dialog */}
+			<Dialog open={isSupplyDialogOpen} onOpenChange={setIsSupplyDialogOpen}>
+				<DialogContent className="web3-card sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="gradient-text">
+							Supply {selectedAsset?.symbol}
+						</DialogTitle>
+						<DialogDescription>
+							Supply {selectedAsset?.symbol} to earn{" "}
+							{selectedAsset?.supplyApr} APR
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-6 py-4">
+						<div className="space-y-2">
+							<div className="flex justify-between">
+								<Label
+									htmlFor="supply-amount"
+									className="text-sm font-medium"
+								>
+									Amount
+								</Label>
+								<span className="text-sm text-slate-400">
+									Available:{" "}
+									{selectedAsset?.walletBalance}{" "}
+									{selectedAsset?.symbol}
+								</span>
+							</div>
+							<div className="flex gap-2">
+								<Input
+									id="supply-amount"
+									placeholder={`0.00 ${selectedAsset?.symbol}`}
+									value={supplyAmount}
+									onChange={(e) => setSupplyAmount(e.target.value)}
+									className="bg-slate-800 border-slate-700"
+								/>
+								<Button
+									variant="outline"
+									onClick={() =>
+										setSupplyAmount(
+											selectedAsset?.walletBalance || ""
+										)
+									}
+									className="px-3"
+								>
+									Max
+								</Button>
+							</div>
+						</div>
+
+						<div className="space-y-2">
+							<Label className="text-sm font-medium">
+								Supply Overview
+							</Label>
+							<div className="bg-slate-800/70 rounded-lg p-4 space-y-2 backdrop-blur-sm">
+								<div className="flex justify-between">
+									<span className="text-slate-400">Amount</span>
+									<span>
+										{supplyAmount || "0.00"}{" "}
+										{selectedAsset?.symbol}
+									</span>
+								</div>
+								<div className="flex justify-between">
+									<span className="text-slate-400">APR</span>
+									<span className="text-primary">
+										{selectedAsset?.supplyApr}
+									</span>
+								</div>
+								<div className="flex justify-between">
+									<span className="text-slate-400">
+										Est. Annual Earnings
+									</span>
+									<span className="text-green-500">
+										{supplyAmount &&
+										!isNaN(Number.parseFloat(supplyAmount))
+											? (
+													Number.parseFloat(supplyAmount) *
+													(Number.parseFloat(
+														selectedAsset?.supplyApr?.replace(
+															"%", ""
+														) || "0"
+													) / 100)
+											  ).toFixed(2)
+											: "0.00"}{" "}
+										{selectedAsset?.symbol}
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setIsSupplyDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button onClick={handleSupplySubmit} className="web3-button">
+							Supply
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Withdraw Dialog */}
+			<Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+				<DialogContent className="web3-card sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="gradient-text">
+							Withdraw {selectedAsset?.symbol}
+						</DialogTitle>
+						<DialogDescription>
+							Withdraw your supplied {selectedAsset?.symbol} from the pool
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-6 py-4">
+						<div className="space-y-2">
+							<div className="flex justify-between">
+								<Label
+									htmlFor="withdraw-amount"
+									className="text-sm font-medium"
+								>
+									Amount
+								</Label>
+								<span className="text-sm text-slate-400">
+									Supplied:{" "}
+									{
+										userSupplies.find(
+											(s) => s.asset === selectedAsset?.symbol
+										)?.suppliedAmount || "0.00"
+									}{" "}
+									{selectedAsset?.symbol}
+								</span>
+							</div>
+							<div className="flex gap-2">
+								<Input
+									id="withdraw-amount"
+									placeholder={`0.00 ${selectedAsset?.symbol}`}
+									value={withdrawAmount}
+									onChange={(e) => setWithdrawAmount(e.target.value)}
+									className="bg-slate-800 border-slate-700"
+								/>
+								<Button
+									variant="outline"
+									onClick={() =>
+										setWithdrawAmount(
+											userSupplies.find(
+												(s) => s.asset === selectedAsset?.symbol
+											)?.suppliedAmount || ""
+										)
+									}
+									className="px-3"
+								>
+									Max
+								</Button>
+							</div>
+						</div>
+
+						<div className="space-y-2">
+							<Label className="text-sm font-medium">
+								Withdrawal Summary
+							</Label>
+							<div className="bg-slate-800/70 rounded-lg p-4 space-y-2 backdrop-blur-sm">
+								<div className="flex justify-between">
+									<span className="text-slate-400">Principal</span>
+									<span>
+										{withdrawAmount || "0.00"}{" "}
+										{selectedAsset?.symbol}
+									</span>
+								</div>
+								<div className="flex justify-between">
+									<span className="text-slate-400">Accrued Interest</span>
+									<span className="text-green-500">
+										{
+											userSupplies.find(
+												(s) => s.asset === selectedAsset?.symbol
+											)?.earnedInterest || "0.00"
+										}{" "}
+										{selectedAsset?.symbol}
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setIsWithdrawDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button onClick={handleWithdrawSubmit} className="web3-button">
+							Withdraw
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

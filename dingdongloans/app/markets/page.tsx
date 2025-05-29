@@ -1,15 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import { Search, ArrowUpDown, Info } from "lucide-react"
+import { Search, ArrowUpDown, Info, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import DepositAssetForm from "@/components/deposit-asset-form"
 
 export default function MarketsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState<string>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false)
+  const [selectedAssetForDeposit, setSelectedAssetForDeposit] = useState<string>("")
 
   const markets = [
     {
@@ -118,6 +123,16 @@ export default function MarketsPage() {
     return sortDirection === "asc" ? comparison : -comparison
   })
 
+  const handleDepositAsset = (assetSymbol: string) => {
+    setSelectedAssetForDeposit(assetSymbol)
+    setIsDepositDialogOpen(true)
+  }
+
+  const handleDepositSuccess = () => {
+    setIsDepositDialogOpen(false)
+    setSelectedAssetForDeposit("")
+  }
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -167,7 +182,7 @@ export default function MarketsPage() {
                       className="flex items-center gap-1 ml-auto hover:text-primary"
                       onClick={() => handleSort("depositApy")}
                     >
-                      Deposit APR
+                      Deposit APY
                       {sortBy === "depositApy" && <ArrowUpDown className="h-4 w-4" />}
                     </button>
                   </th>
@@ -197,6 +212,7 @@ export default function MarketsPage() {
                       </Tooltip>
                     </TooltipProvider>
                   </th>
+                  <th className="text-right p-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,6 +237,16 @@ export default function MarketsPage() {
                     <td className="p-4 text-right text-primary font-medium">{market.depositApy}</td>
                     <td className="p-4 text-right text-yellow-500 font-medium">{market.borrowApr}</td>
                     <td className="p-4 text-right">{market.collateralFactor}</td>
+                    <td className="p-4 text-right">
+                      <Button
+                        size="sm"
+                        onClick={() => handleDepositAsset(market.symbol)}
+                        className="web3-button"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Deposit
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -284,6 +310,27 @@ export default function MarketsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Deposit Dialog */}
+      <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
+        <DialogContent
+          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+          style={{ position: "fixed" }}
+        >
+          <DialogHeader>
+            <DialogTitle className="gradient-text text-xl">
+              Deposit {selectedAssetForDeposit}
+            </DialogTitle>
+            <DialogDescription>
+              Deposit {selectedAssetForDeposit} to earn interest and use it as collateral for borrowing.
+            </DialogDescription>
+          </DialogHeader>
+          <DepositAssetForm
+            onSuccess={handleDepositSuccess}
+            preselectedAsset={selectedAssetForDeposit}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -121,7 +121,7 @@ export default function BorrowPage() {
       <Tabs defaultValue="crypto" className="space-y-8">
         <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2 bg-slate-800/50">
           <TabsTrigger value="crypto">Borrow Crypto</TabsTrigger>
-          <TabsTrigger value="proposals">Business Proposals</TabsTrigger>
+          <TabsTrigger value="proposals">My Proposals</TabsTrigger>
         </TabsList>
 
         <TabsContent value="crypto" className="space-y-6">
@@ -247,7 +247,9 @@ export default function BorrowPage() {
                 <CardDescription>Available assets for borrowing with current rates and liquidity</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {pools[0].assets.map((asset) => (
+                {pools[0].assets
+                  .filter(asset => asset.symbol === "IDRX") // Only show IDRX for borrowing
+                  .map((asset) => (
                   <div key={asset.symbol} className="flex justify-between items-center p-3 bg-slate-800 rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
@@ -264,6 +266,11 @@ export default function BorrowPage() {
                     </div>
                   </div>
                 ))}
+                <div className="pt-2">
+                  <div className="text-sm text-slate-400 p-2 bg-slate-800/50 rounded-lg">
+                    📢 Currently, only IDRX is available for borrowing. Other assets can be used as collateral.
+                  </div>
+                </div>
                 <div className="pt-2">
                   <Link href="/markets" className="text-sm text-blue-400 hover:text-blue-300 flex items-center">
                     View all markets <ChevronRight className="ml-1 h-4 w-4" />
@@ -352,18 +359,12 @@ export default function BorrowPage() {
                         </CardHeader>
                         <CardContent className="pb-2">
                           <p className="text-sm text-slate-300 mb-4">{proposal.short_description}</p>
-                          <div className="grid grid-cols-3 gap-2 mb-4">
+                          <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <TrendingUp className="h-3 w-3" /> Return
                               </div>
                               <p className="text-sm font-medium gradient-text">{proposal.expected_return}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-                                <Calendar className="h-3 w-3" /> Duration
-                              </div>
-                              <p className="text-sm font-medium">{proposal.duration}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
@@ -465,18 +466,12 @@ export default function BorrowPage() {
                         </CardHeader>
                         <CardContent className="pb-2">
                           <p className="text-sm text-slate-300 mb-4">{proposal.short_description}</p>
-                          <div className="grid grid-cols-3 gap-2 mb-4">
+                          <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <TrendingUp className="h-3 w-3" /> Return
                               </div>
                               <p className="text-sm font-medium gradient-text">{proposal.expected_return}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-                                <Calendar className="h-3 w-3" /> Duration
-                              </div>
-                              <p className="text-sm font-medium">{proposal.duration}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
@@ -556,18 +551,12 @@ export default function BorrowPage() {
                         </CardHeader>
                         <CardContent className="pb-2">
                           <p className="text-sm text-slate-300 mb-4">{proposal.short_description}</p>
-                          <div className="grid grid-cols-3 gap-2 mb-4">
+                          <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <TrendingUp className="h-3 w-3" /> Return
                               </div>
                               <p className="text-sm font-medium gradient-text">{proposal.expected_return}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-                                <Calendar className="h-3 w-3" /> Duration
-                              </div>
-                              <p className="text-sm font-medium">{proposal.duration}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">

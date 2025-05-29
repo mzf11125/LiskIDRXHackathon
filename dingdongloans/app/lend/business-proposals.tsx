@@ -200,23 +200,13 @@ export default function BusinessProposals() {
 								<p className="text-sm text-slate-300 mb-4">
 									{proposal.short_description}
 								</p>
-								<div className="grid grid-cols-3 gap-2 mb-4">
+								<div className="grid grid-cols-2 gap-2 mb-4">
 									<div className="text-center">
 										<div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-											<TrendingUp className="h-3 w-3" />{" "}
-											Return
+											<TrendingUp className="h-3 w-3" /> Return
 										</div>
 										<p className="text-sm font-medium gradient-text">
 											{proposal.expected_return}
-										</p>
-									</div>
-									<div className="text-center">
-										<div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
-											<Calendar className="h-3 w-3" />{" "}
-											Duration
-										</div>
-										<p className="text-sm font-medium">
-											{proposal.duration}
 										</p>
 									</div>
 									<div className="text-center">

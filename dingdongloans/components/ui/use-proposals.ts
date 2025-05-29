@@ -12,7 +12,6 @@ export type ProposalData = {
   fullDescription: string
   businessPlan: string
   expectedReturn: string
-  duration: string
   targetFunding: string
   minimumInvestment: string
   maximumInvestment: string

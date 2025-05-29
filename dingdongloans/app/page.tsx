@@ -2,17 +2,28 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { ArrowRight, TrendingUp, Wallet, BarChart3, Shield, ArrowUpRight } from "lucide-react"
+import { ArrowRight, TrendingUp, Wallet, BarChart3, Shield, ArrowUpRight, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useWallet } from "@/components/wallet-provider"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import DepositAssetForm from "@/components/deposit-asset-form"
+import { getUserDeposits } from "@/data/mock-data"
 
 export default function Home() {
   const { isConnected, connect } = useWallet()
   const [activeTab, setActiveTab] = useState("overview")
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false)
+  const [selectedAssetForDeposit, setSelectedAssetForDeposit] = useState<string>("")
   const heroRef = useRef<HTMLDivElement>(null)
+
+  // Get user deposits
+  const userDeposits = getUserDeposits()
+  const totalDepositValue = userDeposits.reduce((sum, deposit) => {
+    return sum + parseFloat(deposit.value.replace('$', '').replace(',', ''))
+  }, 0)
 
   // Animated number counter effect
   const AnimatedCounter = ({
@@ -70,6 +81,17 @@ export default function Home() {
     }
   }, [])
 
+  const handleDepositAsset = (assetSymbol: string) => {
+    setSelectedAssetForDeposit(assetSymbol)
+    setIsDepositDialogOpen(true)
+  }
+
+  const handleDepositSuccess = () => {
+    setIsDepositDialogOpen(false)
+    setSelectedAssetForDeposit("")
+    // In a real app, you might want to refresh data here
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -96,7 +118,7 @@ export default function Home() {
                     </Link>
                     <Link href="/borrow">
                       <Button variant="outline" className="text-lg px-8 py-6 border-slate-700 hover:bg-slate-800 group">
-                        Borrow Assets{" "}
+                        Deposit Assets{" "}
                         <ArrowUpRight className="ml-2 h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                       </Button>
                     </Link>
@@ -229,17 +251,17 @@ export default function Home() {
                 <div className="grid md:grid-cols-3 gap-6">
                   <Card className="web3-card floating">
                     <CardHeader>
-                      <CardTitle className="text-lg">Deposit Balance</CardTitle>
+                      <CardTitle className="text-lg">Total Deposit Value</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold gradient-text">$0.00</p>
-                      <p className="text-sm text-slate-400 mt-1">Across 0 assets</p>
+                      <p className="text-3xl font-bold gradient-text">${totalDepositValue.toFixed(2)}</p>
+                      <p className="text-sm text-slate-400 mt-1">Across {userDeposits.length} assets</p>
                     </CardContent>
                   </Card>
 
                   <Card className="web3-card floating-delay-1">
                     <CardHeader>
-                      <CardTitle className="text-lg">Borrow Balance</CardTitle>
+                      <CardTitle className="text-lg">Total Debt</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-3xl font-bold gradient-text">$0.00</p>
@@ -249,10 +271,12 @@ export default function Home() {
 
                   <Card className="web3-card floating-delay-2">
                     <CardHeader>
-                      <CardTitle className="text-lg">Net APR</CardTitle>
+                      <CardTitle className="text-lg">Net APY</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold gradient-text">0.00%</p>
+                      <p className="text-3xl font-bold gradient-text">
+                        {userDeposits.length > 0 ? "7.2%" : "0.00%"}
+                      </p>
                       <p className="text-sm text-slate-400 mt-1">Based on your positions</p>
                     </CardContent>
                   </Card>
@@ -263,19 +287,52 @@ export default function Home() {
                     <CardTitle>Your Positions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-8">
-                      <p className="text-slate-400">You don't have any active positions yet.</p>
-                      <div className="mt-4 flex justify-center gap-4">
-                        <Button onClick={() => setActiveTab("supply")} variant="outline" className="group">
-                          Supply Assets{" "}
-                          <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                        </Button>
-                        <Button onClick={() => setActiveTab("borrow")} variant="outline" className="group">
-                          Borrow Assets{" "}
-                          <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                        </Button>
+                    {userDeposits.length > 0 ? (
+                      <div className="space-y-4">
+                        {userDeposits.map((deposit) => (
+                          <div key={deposit.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                                {deposit.asset.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-medium">{deposit.asset}</p>
+                                <p className="text-sm text-slate-400">Deposited: {deposit.amount}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium gradient-text">{deposit.value}</p>
+                              <p className="text-sm text-green-500">+{deposit.earnedInterest} earned</p>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="pt-4 flex justify-center gap-4">
+                          <Button onClick={() => setIsDepositDialogOpen(true)} className="web3-button group">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Deposit More{" "}
+                            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                          <Button onClick={() => setActiveTab("borrow")} variant="outline" className="group">
+                            Borrow Assets{" "}
+                            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-slate-400">You don't have any active positions yet.</p>
+                        <div className="mt-4 flex justify-center gap-4">
+                          <Button onClick={() => setActiveTab("supply")} variant="outline" className="group">
+                            Supply Assets{" "}
+                            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                          <Button onClick={() => setActiveTab("borrow")} variant="outline" className="group">
+                            Borrow Assets{" "}
+                            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -299,13 +356,19 @@ export default function Home() {
                             </div>
                             <div>
                               <p className="font-medium">{token}</p>
-                              <p className="text-xs text-slate-400">Wallet: 0.00</p>
+                              <p className="text-xs text-slate-400">
+                                Wallet: 0.00 {token === "IDRX" ? "(Earn interest + Borrowable)" : "(Earn interest + Collateral)"}
+                              </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium gradient-text">{5 + i * 2}% APR</p>
-                            <Button size="sm" className="mt-1 h-8 web3-button">
-                              Supply
+                            <p className="font-medium gradient-text">{5 + i * 2}% APY</p>
+                            <Button 
+                              size="sm" 
+                              className="mt-1 h-8 web3-button"
+                              onClick={() => handleDepositAsset(token)}
+                            >
+                              Deposit
                             </Button>
                           </div>
                         </div>
@@ -319,12 +382,21 @@ export default function Home() {
                 <Card className="web3-card">
                   <CardHeader>
                     <CardTitle>Assets to Borrow</CardTitle>
-                    <CardDescription>Borrow assets against your supplied collateral</CardDescription>
+                    <CardDescription>Currently only IDRX is available for borrowing</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="text-center py-8">
-                      <p className="text-slate-400">You need to supply assets as collateral before borrowing.</p>
-                      <Button onClick={() => setActiveTab("supply")} className="mt-4 web3-button group">
+                      <div className="flex justify-center mb-4">
+                        <div className="w-16 h-16 rounded-full bg-slate-700 flex items-center justify-center">
+                          <span className="text-2xl font-bold">I</span>
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">IDRX Token</h3>
+                      <p className="text-slate-400 mb-4">The primary borrowable asset on our platform</p>
+                      <p className="text-sm text-slate-400 mb-4">
+                        You need to supply assets as collateral before borrowing IDRX.
+                      </p>
+                      <Button onClick={() => setActiveTab("supply")} className="web3-button group">
                         Supply Collateral{" "}
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -336,6 +408,27 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* Deposit Dialog */}
+      <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
+        <DialogContent 
+          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+          style={{ position: "fixed" }}
+        >
+          <DialogHeader>
+            <DialogTitle className="gradient-text text-xl">
+              Deposit Assets
+            </DialogTitle>
+            <DialogDescription>
+              Deposit assets to earn interest and use them as collateral for borrowing.
+            </DialogDescription>
+          </DialogHeader>
+          <DepositAssetForm 
+            onSuccess={handleDepositSuccess} 
+            preselectedAsset={selectedAssetForDeposit}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

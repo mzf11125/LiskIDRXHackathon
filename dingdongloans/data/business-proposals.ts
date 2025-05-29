@@ -11,7 +11,6 @@ export const fetchBusinessProposals = async (
 			`/proposals/?skip=${skip}&limit=${limit}`
 		);
 
-		// Convert snake_case to camelCase
 		return data.proposals.map((proposal: any) => ({
 			id: proposal.id,
 			company_name: proposal.company_name,
@@ -22,7 +21,6 @@ export const fetchBusinessProposals = async (
 			full_description: proposal.full_description,
 			business_plan: proposal.business_plan,
 			expected_return: proposal.expected_return,
-			duration: proposal.duration,
 			minimum_investment: proposal.minimum_investment,
 			maximum_investment: proposal.maximum_investment,
 			proposer_wallet: proposal.proposer_wallet,
@@ -74,7 +72,6 @@ export const getBusinessProposalById = async (
 			full_description: proposal.full_description,
 			business_plan: proposal.business_plan,
 			expected_return: proposal.expected_return,
-			duration: proposal.duration,
 			minimum_investment: proposal.minimum_investment,
 			maximum_investment: proposal.maximum_investment,
 			proposer_wallet: proposal.proposer_wallet,

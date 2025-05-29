@@ -72,9 +72,6 @@ const formSchema = z.object({
 	expected_return: z.string().min(1, {
 		message: "Expected return is required.",
 	}),
-	duration: z.string().min(1, {
-		message: "Duration is required.",
-	}),
 	target_funding: z.string().min(1, {
 		message: "Target funding amount is required.",
 	}),
@@ -131,7 +128,6 @@ export default function CreateProposalForm({
       full_description: "",
       business_plan: "",
       expected_return: "",
-      duration: "",
       target_funding: "",
       minimum_investment: "",
       maximum_investment: "",
@@ -327,26 +323,6 @@ export default function CreateProposalForm({
 
 							<FormField
 								control={form.control}
-								name="duration"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Duration</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="e.g., 12 months"
-												{...field}
-												className="bg-slate-800 border-slate-700"
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</div>
-
-						<div className="grid grid-cols-2 gap-4">
-							<FormField
-								control={form.control}
 								name="target_funding"
 								render={({ field }) => (
 									<FormItem>
@@ -362,7 +338,9 @@ export default function CreateProposalForm({
 									</FormItem>
 								)}
 							/>
+						</div>
 
+						<div className="grid grid-cols-2 gap-4">
 							<FormField
 								control={form.control}
 								name="deadline"
@@ -420,9 +398,7 @@ export default function CreateProposalForm({
 									</FormItem>
 								)}
 							/>
-						</div>
 
-						<div className="grid grid-cols-2 gap-4">
 							<FormField
 								control={form.control}
 								name="minimum_investment"
@@ -442,27 +418,27 @@ export default function CreateProposalForm({
 									</FormItem>
 								)}
 							/>
-
-							<FormField
-								control={form.control}
-								name="maximum_investment"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>
-											Maximum Investment
-										</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="e.g., 10 BTC"
-												{...field}
-												className="bg-slate-800 border-slate-700"
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
 						</div>
+
+						<FormField
+							control={form.control}
+							name="maximum_investment"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>
+										Maximum Investment
+									</FormLabel>
+									<FormControl>
+										<Input
+											placeholder="e.g., 10 BTC"
+											{...field}
+											className="bg-slate-800 border-slate-700"
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 					</div>
 
 					<div className="space-y-6">

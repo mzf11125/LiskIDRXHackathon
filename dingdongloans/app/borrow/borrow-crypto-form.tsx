@@ -182,7 +182,9 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                           {allAssets
                             .filter(
                               (asset, index, self) =>
-                                index === self.findIndex((a) => a.symbol === asset.symbol) && asset.borrowEnabled,
+                                index === self.findIndex((a) => a.symbol === asset.symbol) && 
+                                asset.supplyEnabled && 
+                                asset.symbol === "IDRX" // Only allow IDRX for borrowing
                             )
                             .map((asset) => (
                               <SelectItem key={asset.symbol} value={asset.symbol}>
@@ -192,7 +194,7 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Current rate: {borrowAsset ? allAssets.find((a) => a.symbol === borrowAsset)?.apr : "N/A"}
+                        Current rate: {borrowAsset ? allAssets.find((a) => a.symbol === borrowAsset)?.apr : "8.2% (IDRX only)"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -216,7 +218,7 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                         />
                       </FormControl>
                       <FormDescription>
-                        Available: {borrowAsset ? allAssets.find((a) => a.symbol === borrowAsset)?.available : "N/A"}
+                        Available: {borrowAsset ? allAssets.find((a) => a.symbol === borrowAsset)?.available : "IDRX only available for borrowing"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
