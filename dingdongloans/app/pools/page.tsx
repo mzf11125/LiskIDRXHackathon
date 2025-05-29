@@ -310,7 +310,7 @@ export default function PoolsPage() {
                   <th className="text-left p-4">Pool Name</th>
                   <th className="text-center p-4">Risk Level</th>
                   <th className="text-center p-4">TVL</th>
-                  <th className="text-center p-4">Avg. Supply APY</th>
+                  <th className="text-center p-4">Avg. Supply APR</th>
                   <th className="text-center p-4">Avg. Borrow APR</th>
                   <th className="text-center p-4">Requirements</th>
                   <th className="text-center p-4">Eligibility</th>
@@ -318,9 +318,9 @@ export default function PoolsPage() {
               </thead>
               <tbody>
                 {pools.map((pool) => {
-                  // Calculate average APY and APR
+                  // Calculate average APR and APR
                   const avgApy =
-                    pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apy?.replace("%", "") || "0"), 0) /
+                    pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apr?.replace("%", "") || "0"), 0) /
                     pool.assets.length
                   const avgApr =
                     pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apr?.replace("%", "") || "0"), 0) /

@@ -260,8 +260,8 @@ export default async function Page({ params }: { params: { id: string } }) {
 									</TooltipTrigger>
 									<TooltipContent>
 										<p>
-											Annual Percentage Yield (APY):{" "}
-											{opportunity.apy}
+											Annual Percentage Yield (APR):{" "}
+											{opportunity.apr}
 										</p>
 									</TooltipContent>
 								</Tooltip>

@@ -167,7 +167,7 @@ export default function MarketsPage() {
                       className="flex items-center gap-1 ml-auto hover:text-primary"
                       onClick={() => handleSort("depositApy")}
                     >
-                      Deposit APY
+                      Deposit APR
                       {sortBy === "depositApy" && <ArrowUpDown className="h-4 w-4" />}
                     </button>
                   </th>
@@ -265,7 +265,7 @@ export default function MarketsPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
-                <span className="text-slate-400">Highest Deposit APY</span>
+                <span className="text-slate-400">Highest Deposit APR</span>
                 <span className="font-bold text-primary">8.2% (IDRX)</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">

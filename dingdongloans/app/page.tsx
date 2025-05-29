@@ -121,7 +121,7 @@ export default function Home() {
                   suffix="B+"
                   formatOptions={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
                 />
-                <AnimatedCounter end={12} label="Avg. APY" suffix="%" />
+                <AnimatedCounter end={12} label="Avg. APR" suffix="%" />
                 <AnimatedCounter end={50000} label="Active Users" suffix="+" />
               </div>
             </div>
@@ -141,7 +141,7 @@ export default function Home() {
                         <div>
                           <p className="font-medium">{token}</p>
                           <p className="text-xs text-slate-400">
-                            Deposit APY: {5 + i * 2}% | Borrow APR: {3 + i * 1.5}%
+                            Deposit APR: {5 + i * 2}% | Borrow APR: {3 + i * 1.5}%
                           </p>
                         </div>
                       </div>
@@ -249,7 +249,7 @@ export default function Home() {
 
                   <Card className="web3-card floating-delay-2">
                     <CardHeader>
-                      <CardTitle className="text-lg">Net APY</CardTitle>
+                      <CardTitle className="text-lg">Net APR</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-3xl font-bold gradient-text">0.00%</p>
@@ -303,7 +303,7 @@ export default function Home() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium gradient-text">{5 + i * 2}% APY</p>
+                            <p className="font-medium gradient-text">{5 + i * 2}% APR</p>
                             <Button size="sm" className="mt-1 h-8 web3-button">
                               Supply
                             </Button>

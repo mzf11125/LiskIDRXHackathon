@@ -28,7 +28,7 @@ export type LendingOpportunity = {
     icon?: string
   }
   interestRate: string
-  apy: string
+  apr: string
   duration: string
   totalAvailable: string
   minLendAmount: string

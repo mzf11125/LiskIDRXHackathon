@@ -5,7 +5,7 @@ export type AssetType = {
   name: string
   icon?: string
   price: string
-  apy?: string
+  apr?: string
   apr?: string
   walletBalance?: string
   available?: string

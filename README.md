@@ -35,7 +35,7 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 2. **Browse Opportunities**: Explore lending pools or business funding opportunities
 3. **Supply Assets**: Deposit assets into pools to earn interest
 4. **Invest in Business Proposals**: Fund verified business proposals with transparent risk metrics
-5. **Earn Returns**: Collect interest payments based on platform APY rates
+5. **Earn Returns**: Collect interest payments based on platform APR rates
 
 ### For Borrowers
 

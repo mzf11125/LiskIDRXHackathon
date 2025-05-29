@@ -315,7 +315,7 @@ export default function CreateProposalForm({
 										<FormLabel>Expected Return</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="e.g., 15-20% APY"
+												placeholder="e.g., 15-20% APR"
 												{...field}
 												className="bg-slate-800 border-slate-700"
 											/>
