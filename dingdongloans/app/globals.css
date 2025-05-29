@@ -83,7 +83,6 @@
 
 .web3-card:hover {
   box-shadow: 0 8px 30px rgba(0, 118, 255, 0.15);
-  transform: translateY(-2px);
 }
 
 .web3-gradient {
