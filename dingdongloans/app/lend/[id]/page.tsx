@@ -1,15 +1,54 @@
-import { Suspense } from "react";
-import lendingOpportunityPage from "./client-page"; // Import the client component
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { getLendingProposalById } from "@/data/lending-proposal";
+import { BusinessProposal } from "@/types/business-proposal";
+import LendingOpportunityPage from "./client-page";
 
-// Server Component - handles data fetching
-export default async function Page({ params }: { params: { id: string } }) {
-	const opportunity = await getLendingProposalById(params.id);
+export default function Page() {
+    const params = useParams();
+    const [opportunity, setOpportunity] = useState<BusinessProposal | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-	return (
-		<Suspense fallback={<div>Loading...</div>}>
-			<LendingOpportunityPage opportunity={opportunity} />
-		</Suspense>
-	);
+    useEffect(() => {
+        async function fetchOpportunity() {
+            try {
+                setLoading(true);
+                const data = await getLendingProposalById(params.id as string);
+                setOpportunity(data);
+            } catch (err) {
+                console.error("Error loading lending proposal:", err);
+                setError("Failed to load proposal");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        if (params.id) {
+            fetchOpportunity();
+        }
+    }, [params.id]);
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-16 text-center">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+                <h1 className="text-2xl font-bold mb-4">Loading Proposal...</h1>
+                <p className="text-slate-400">Please wait while we fetch the proposal details.</p>
+            </div>
+        );
+    }
+
+    if (error || !opportunity) {
+        return (
+            <div className="container mx-auto px-4 py-16 text-center">
+                <h1 className="text-2xl font-bold mb-4">Proposal Not Found</h1>
+                <p className="text-slate-400">{error || "The requested lending proposal could not be found."}</p>
+            </div>
+        );
+    }
+
+    return <LendingOpportunityPage opportunity={opportunity} />;
 }
-
