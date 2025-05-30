@@ -101,10 +101,10 @@ export default function Home() {
             <div className="space-y-8">
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                  <span className="gradient-text">Decentralized</span> Lending on Lisk
+                  <span className="gradient-text">AI-Powered</span> Decentralized Lending
                 </h1>
                 <p className="mt-6 text-xl text-slate-300">
-                  Borrow and lend digital assets with the most secure and transparent platform on the Lisk blockchain powered with AI analyzer.
+                  Revolutionary DeFi lending with smart AI risk assessment, personalized collateral optimization, and automated wallet analysis on the Lisk blockchain.
                 </p>
               </div>
               <div className="flex flex-wrap gap-4">
@@ -163,7 +163,7 @@ export default function Home() {
                         <div>
                           <p className="font-medium">{token}</p>
                           <p className="text-xs text-slate-400">
-                            Deposit APR: {5 + i * 2}% | Borrow APR: {3 + i * 1.5}%
+                            Deposit: {5 + i * 2}% | Borrow: {3 + i * 1.5}%
                           </p>
                         </div>
                       </div>
@@ -192,31 +192,31 @@ export default function Home() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold">
-              Why Choose <span className="gradient-text">Dingdong.loans</span>
+              Next-Generation <span className="gradient-text">AI-Powered DeFi</span>
             </h2>
             <p className="mt-4 text-xl text-slate-400 max-w-3xl mx-auto">
-              Our platform offers the most secure, transparent, and efficient way to lend and borrow digital assets.
+              Experience the future of lending with advanced AI that analyzes your wallet history, optimizes collateral ratios, and provides personalized borrowing recommendations.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                title: "AI-Powered Analyzer",
-                description: "Leverage our AI-driven insights for smarter lending and borrowing decisions.",
-                icon: <TrendingUp className="h-10 w-10 text-primary" />, // Or a more AI-specific icon if you have one
+                title: "🤖 Smart Wallet Analysis",
+                description: "Advanced machine learning algorithms analyze your transaction history, wallet age, and behavior patterns to determine your optimal borrowing profile and risk assessment.",
+                icon: <TrendingUp className="h-10 w-10 text-primary" />,
                 delay: "floating-delay-0",
               },
               {
-                title: "Secure Protocol",
-                description: "Built on Lisk blockchain with multiple security audits and insurance",
-                icon: <Shield className="h-10 w-10 text-primary" />,
+                title: "🎯 Personalized Risk Scoring",
+                description: "Our AI assigns dynamic risk scores based on 50+ wallet metrics, enabling personalized collateral ratios and interest rates tailored to your financial profile.",
+                icon: <BarChart3 className="h-10 w-10 text-primary" />,
                 delay: "floating-delay-1",
               },
               {
-                title: "Transparent",
-                description: "All transactions and rates are visible on-chain for complete transparency",
-                icon: <BarChart3 className="h-10 w-10 text-primary" />,
+                title: "⚡ Automated Optimization",
+                description: "Real-time AI recommendations for optimal lending strategies, automated liquidation protection, and smart portfolio rebalancing suggestions.",
+                icon: <Shield className="h-10 w-10 text-primary" />,
                 delay: "floating-delay-2",
               },
             ].map((feature, i) => (
@@ -234,6 +234,90 @@ export default function Home() {
         </div>
       </section>
 
+      {/* AI Features Highlight Section */}
+      <section className="py-20 relative overflow-hidden bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold gradient-text mb-4">
+              🚀 Revolutionary AI Technology
+            </h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              The first DeFi platform to use advanced AI for comprehensive wallet analysis and personalized lending optimization.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
+                  <TrendingUp className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Dynamic Risk Assessment</h3>
+                  <p className="text-slate-400">
+                    Our AI analyzes transaction patterns, wallet age, DeFi activity, and 50+ other metrics to create a comprehensive risk profile that adapts in real-time.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Smart Collateral Ratios</h3>
+                  <p className="text-slate-400">
+                    Get personalized collateral requirements based on your unique risk profile. High-score wallets enjoy up to 85% collateral ratios.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Predictive Analytics</h3>
+                  <p className="text-slate-400">
+                    Advanced algorithms predict market conditions and provide personalized recommendations to optimize your lending strategy and minimize risks.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="web3-card p-6 glow-border">
+                <h3 className="text-xl font-semibold mb-4 gradient-text">AI Wallet Analysis Preview</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                    <span className="text-slate-400">Risk Score</span>
+                    <span className="font-bold text-green-500">85.2/100</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                    <span className="text-slate-400">Risk Level</span>
+                    <span className="font-bold text-green-500">Low Risk</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                    <span className="text-slate-400">Max Collateral Ratio</span>
+                    <span className="font-bold text-primary">Up to 85%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                    <span className="text-slate-400">Recommended Assets</span>
+                    <span className="font-bold">BTC, ETH, LSK</span>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-green-950/30 border border-green-800/50 rounded-lg">
+                  <p className="text-green-400 text-sm font-medium">✨ AI Recommendation</p>
+                  <p className="text-slate-300 text-sm mt-1">
+                    Excellent borrowing profile. You qualify for premium rates and maximum collateral efficiency.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Dashboard Preview */}
       {isConnected && (
         <section className="py-16 relative overflow-hidden glass-effect">
@@ -243,7 +327,7 @@ export default function Home() {
             <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 mb-8 bg-slate-800/50">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="supply">Supply</TabsTrigger>
+                <TabsTrigger value="supply">Deposit</TabsTrigger>
                 <TabsTrigger value="borrow">Borrow</TabsTrigger>
               </TabsList>
 
@@ -271,7 +355,7 @@ export default function Home() {
 
                   <Card className="web3-card floating-delay-2">
                     <CardHeader>
-                      <CardTitle className="text-lg">Net APY</CardTitle>
+                      <CardTitle className="text-lg">Net APR</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-3xl font-bold gradient-text">
@@ -321,11 +405,10 @@ export default function Home() {
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-slate-400">You don't have any active positions yet.</p>
-                        <div className="mt-4 flex justify-center gap-4">
-                          <Button onClick={() => setActiveTab("supply")} variant="outline" className="group">
-                            Supply Assets{" "}
-                            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                          </Button>
+                        <div className="mt-4 flex justify-center gap-4">                      <Button onClick={() => setActiveTab("supply")} variant="outline" className="group">
+                        Deposit Assets{" "}
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </Button>
                           <Button onClick={() => setActiveTab("borrow")} variant="outline" className="group">
                             Borrow Assets{" "}
                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -340,8 +423,8 @@ export default function Home() {
               <TabsContent value="supply" className="space-y-6">
                 <Card className="web3-card">
                   <CardHeader>
-                    <CardTitle>Assets to Deposit</CardTitle>
-                    <CardDescription>Supply assets to earn interest and use as collateral</CardDescription>
+                    <CardTitle>Deposit Assets</CardTitle>
+                    <CardDescription>Deposit assets to earn interest and use as collateral</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -362,7 +445,7 @@ export default function Home() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium gradient-text">{5 + i * 2}% APY</p>
+                            <p className="font-medium gradient-text">{5 + i * 2}% Return</p>
                             <Button 
                               size="sm" 
                               className="mt-1 h-8 web3-button"
@@ -397,7 +480,7 @@ export default function Home() {
                         You need to supply assets as collateral before borrowing IDRX.
                       </p>
                       <Button onClick={() => setActiveTab("supply")} className="web3-button group">
-                        Supply Collateral{" "}
+                        Deposit Assets{" "}
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </div>

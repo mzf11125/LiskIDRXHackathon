@@ -16,6 +16,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { pools } from "@/data/mock-data"
 import { useWallet } from "@/components/wallet-provider"
 import { Progress } from "@/components/ui/progress"
+import { getOrCreateWalletAnalysis } from "@/data/wallet-analysis-api"
+import { createPlaceholderWalletAnalysis } from "@/types/wallet-analysis"
+import type { AIWalletAnalysis } from "@/types/wallet-analysis"
+import { Shield } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 const formSchema = z.object({
   borrowAsset: z.string({
@@ -24,14 +29,11 @@ const formSchema = z.object({
   borrowAmount: z.string().min(1, {
     message: "Please enter an amount to borrow.",
   }),
-  collateralAsset: z.string({
-    required_error: "Please select a collateral asset.",
+  depositAsset: z.string({
+    required_error: "Please select an asset to deposit.",
   }),
-  collateralAmount: z.string().min(1, {
-    message: "Please enter a collateral amount.",
-  }),
-  loanTerm: z.string({
-    required_error: "Please select a loan term.",
+  depositAmount: z.string().min(1, {
+    message: "Please enter a deposit amount.",
   }),
 })
 
@@ -66,28 +68,28 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
   const [interestRate, setInterestRate] = useState(0)
   const [healthFactor, setHealthFactor] = useState(0)
   const [isConfirmStep, setIsConfirmStep] = useState(false)
+  const [walletAnalysis, setWalletAnalysis] = useState<AIWalletAnalysis | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       borrowAsset: "",
       borrowAmount: "",
-      collateralAsset: "",
-      collateralAmount: "",
-      loanTerm: "30",
+      depositAsset: "",
+      depositAmount: "",
     },
   })
 
   // Watch form values to update calculations
   const borrowAsset = form.watch("borrowAsset")
   const borrowAmount = form.watch("borrowAmount")
-  const collateralAsset = form.watch("collateralAsset")
-  const collateralAmount = form.watch("collateralAmount")
-  const loanTerm = form.watch("loanTerm")
+  const depositAsset = form.watch("depositAsset")
+  const depositAmount = form.watch("depositAmount")
 
   // Update calculations when form values change
   useEffect(() => {
-    if (borrowAsset && borrowAmount && collateralAsset && collateralAmount) {
+    if (borrowAsset && borrowAmount && depositAsset && depositAmount) {
       // In a real app, these would be actual calculations based on market data
       const borrowAssetPrice = Number.parseFloat(
         allAssets
@@ -95,38 +97,77 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
           ?.price.replace("$", "")
           .replace(",", "") || "0",
       )
-      const collateralAssetPrice = Number.parseFloat(
+      const depositAssetPrice = Number.parseFloat(
         allAssets
-          .find((a) => a.symbol === collateralAsset)
+          .find((a) => a.symbol === depositAsset)
           ?.price.replace("$", "")
           .replace(",", "") || "0",
       )
 
       const borrowAmountValue = Number.parseFloat(borrowAmount) * borrowAssetPrice
-      const collateralAmountValue = Number.parseFloat(collateralAmount) * collateralAssetPrice
+      const depositAmountValue = Number.parseFloat(depositAmount) * depositAssetPrice
 
       setBorrowValue(borrowAmountValue)
-      setCollateralValue(collateralAmountValue)
+      setCollateralValue(depositAmountValue)
 
       // Calculate collateralization ratio
-      const ratio = (collateralAmountValue / borrowAmountValue) * 100
+      const ratio = (depositAmountValue / borrowAmountValue) * 100
       setCollateralizationRatio(Math.round(ratio))
 
       // Calculate liquidation price (simplified)
       const minRatio = 150 // Minimum collateralization ratio before liquidation
-      const liquidationPriceValue = (borrowAmountValue * minRatio) / 100 / Number.parseFloat(collateralAmount)
+      const liquidationPriceValue = (borrowAmountValue * minRatio) / 100 / Number.parseFloat(depositAmount)
       setLiquidationPrice(liquidationPriceValue)
 
-      // Set interest rate based on asset and term
-      const baseRate = Number.parseFloat(allAssets.find((a) => a.symbol === borrowAsset)?.apr.replace("%", "") || "0")
-      const termMultiplier = Number.parseInt(loanTerm) === 30 ? 1 : Number.parseInt(loanTerm) === 90 ? 0.95 : 0.9
-      setInterestRate(baseRate * termMultiplier)
+      // Set interest rate based on asset
+      const borrowAssetData = allAssets.find((a) => a.symbol === borrowAsset)
+      const baseRate = Number.parseFloat(borrowAssetData?.apr?.replace("%", "") || "0")
+      setInterestRate(baseRate)
 
       // Calculate health factor (higher is better)
       const health = ratio / minRatio
       setHealthFactor(health)
     }
-  }, [borrowAsset, borrowAmount, collateralAsset, collateralAmount, loanTerm, allAssets])
+  }, [borrowAsset, borrowAmount, depositAsset, depositAmount, allAssets])
+
+  // Load wallet analysis on component mount
+  useEffect(() => {
+    if (address) {
+      loadWalletAnalysis()
+    }
+  }, [address])
+
+  const loadWalletAnalysis = async () => {
+    if (!address) return
+    
+    setAnalysisLoading(true)
+    try {
+      let analysis = await getOrCreateWalletAnalysis(address)
+      
+      if (!analysis || analysis.final_score === 0) {
+        analysis = createPlaceholderWalletAnalysis(address)
+      }
+      
+      setWalletAnalysis(analysis)
+    } catch (error) {
+      console.error("Error loading wallet analysis:", error)
+      setWalletAnalysis(createPlaceholderWalletAnalysis(address))
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
+  // Get recommended max collateral ratio based on wallet analysis
+  const getRecommendedMaxCollateralRatio = () => {
+    if (!walletAnalysis) return 75
+    
+    const score = walletAnalysis.final_score
+    const riskLevel = walletAnalysis.risk_level.toLowerCase()
+    
+    if (score >= 70 && riskLevel === "low") return 85
+    if (score >= 40 && (riskLevel === "low" || riskLevel === "medium")) return 75
+    return 65
+  }
 
   function onSubmit(values: FormValues) {
     if (!isConfirmStep) {
@@ -164,6 +205,47 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {!isConfirmStep ? (
           <>
+            {/* Wallet Analysis Summary */}
+            {walletAnalysis && !analysisLoading && (
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Wallet Risk Assessment</span>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`
+                        ${walletAnalysis.risk_level.toLowerCase() === "low" 
+                          ? "bg-green-500/20 text-green-500 border-green-500/50"
+                          : walletAnalysis.risk_level.toLowerCase() === "medium"
+                          ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"  
+                          : "bg-red-500/20 text-red-500 border-red-500/50"
+                        }
+                      `}
+                    >
+                      {walletAnalysis.risk_level} Risk
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="text-slate-400">Risk Score</div>
+                      <div className="font-medium">{walletAnalysis.final_score.toFixed(1)}/100</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Max Collateral Ratio</div>
+                      <div className="font-medium">Up to {getRecommendedMaxCollateralRatio()}%</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Wallet Age</div>
+                      <div className="font-medium">{walletAnalysis.wallet_metadata.age_days} days</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -229,14 +311,14 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="collateralAsset"
+                  name="depositAsset"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Collateral Asset</FormLabel>
+                      <FormLabel>Deposit Asset</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-slate-800 border-slate-700">
-                            <SelectValue placeholder="Select collateral" />
+                            <SelectValue placeholder="Select deposit asset" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-slate-800 border-slate-700">
@@ -254,8 +336,8 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                       </Select>
                       <FormDescription>
                         Collateral factor:{" "}
-                        {collateralAsset
-                          ? allAssets.find((a) => a.symbol === collateralAsset)?.collateralFactor
+                        {depositAsset
+                          ? allAssets.find((a) => a.symbol === depositAsset)?.collateralFactor
                           : "N/A"}
                       </FormDescription>
                       <FormMessage />
@@ -265,10 +347,10 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
 
                 <FormField
                   control={form.control}
-                  name="collateralAmount"
+                  name="depositAmount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Collateral Amount</FormLabel>
+                      <FormLabel>Deposit Amount</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="0.00"
@@ -281,37 +363,13 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                       </FormControl>
                       <FormDescription>
                         Wallet balance:{" "}
-                        {collateralAsset ? allAssets.find((a) => a.symbol === collateralAsset)?.walletBalance : "N/A"}
+                        {depositAsset ? allAssets.find((a) => a.symbol === depositAsset)?.walletBalance : "N/A"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-
-              <FormField
-                control={form.control}
-                name="loanTerm"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Loan Term</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-slate-800 border-slate-700">
-                          <SelectValue placeholder="Select term" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-slate-800 border-slate-700">
-                        <SelectItem value="30">30 days</SelectItem>
-                        <SelectItem value="90">90 days</SelectItem>
-                        <SelectItem value="180">180 days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Longer terms may have different interest rates</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {borrowValue > 0 && collateralValue > 0 && (
@@ -361,7 +419,7 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                       <div>
                         <div className="text-sm text-slate-400">Liquidation Price</div>
                         <div className="font-medium">
-                          ${liquidationPrice.toFixed(2)} per {collateralAsset}
+                          ${liquidationPrice.toFixed(2)} per {depositAsset}
                         </div>
                       </div>
                       <div>
@@ -379,6 +437,21 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                         <div className="font-medium">{formatCurrency(borrowValue * 0.001)}</div>
                       </div>
                     </div>
+
+                    {/* Enhanced warning based on wallet analysis */}
+                    {walletAnalysis && collateralizationRatio > getRecommendedMaxCollateralRatio() && (
+                      <div className="flex items-start gap-2 p-3 bg-yellow-950/30 border border-yellow-800/50 rounded-md mt-2">
+                        <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-yellow-400">Collateral Ratio Above Recommendation</p>
+                          <p className="text-slate-300">
+                            Based on your wallet risk profile ({walletAnalysis.risk_level} risk, {walletAnalysis.final_score.toFixed(1)} score), 
+                            we recommend a maximum collateral ratio of {getRecommendedMaxCollateralRatio()}%. 
+                            Consider reducing your borrow amount or increasing collateral.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {healthFactor < 1.2 && (
                       <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-800/50 rounded-md mt-2">
@@ -421,11 +494,8 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
 
                     <div className="text-slate-400">You are providing:</div>
                     <div className="font-medium text-right">
-                      {collateralAmount} {collateralAsset}
+                      {depositAmount} {depositAsset}
                     </div>
-
-                    <div className="text-slate-400">Loan term:</div>
-                    <div className="font-medium text-right">{loanTerm} days</div>
 
                     <div className="text-slate-400">Collateralization ratio:</div>
                     <div className="font-medium text-right">{collateralizationRatio}%</div>
@@ -440,7 +510,7 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
 
                     <div className="text-slate-400">Liquidation price:</div>
                     <div className="font-medium text-right">
-                      ${liquidationPrice.toFixed(2)} per {collateralAsset}
+                      ${liquidationPrice.toFixed(2)} per {depositAsset}
                     </div>
 
                     <div className="text-slate-400">Transaction fee:</div>
@@ -453,11 +523,6 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                     <div className="text-slate-400">Total to repay:</div>
                     <div className="font-medium text-right">
                       {borrowAmount} {borrowAsset} + interest
-                    </div>
-
-                    <div className="text-slate-400">Due date:</div>
-                    <div className="font-medium text-right">
-                      {new Date(Date.now() + Number.parseInt(loanTerm) * 24 * 60 * 60 * 1000).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -484,7 +549,7 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
               <Button
                 type="submit"
                 className="web3-button"
-                disabled={!borrowAsset || !borrowAmount || !collateralAsset || !collateralAmount || healthFactor < 1}
+                disabled={!borrowAsset || !borrowAmount || !depositAsset || !depositAmount || healthFactor < 1}
               >
                 Review Loan
               </Button>
