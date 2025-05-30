@@ -345,7 +345,7 @@ export default function Home() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {["IDRX", "LSK", "BTC", "ETH"].map((token, i) => (
+                      {["USDT", "BTC", "ETH"].map((token, i) => (
                         <div
                           key={token}
                           className="flex justify-between items-center p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-all duration-300 transform hover:-translate-y-1"
@@ -363,8 +363,8 @@ export default function Home() {
                           </div>
                           <div className="text-right">
                             <p className="font-medium gradient-text">{5 + i * 2}% APY</p>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               className="mt-1 h-8 web3-button"
                               onClick={() => handleDepositAsset(token)}
                             >
@@ -411,7 +411,7 @@ export default function Home() {
 
       {/* Deposit Dialog */}
       <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-        <DialogContent 
+        <DialogContent
           className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
           style={{ position: "fixed" }}
         >
@@ -423,8 +423,8 @@ export default function Home() {
               Deposit assets to earn interest and use them as collateral for borrowing.
             </DialogDescription>
           </DialogHeader>
-          <DepositAssetForm 
-            onSuccess={handleDepositSuccess} 
+          <DepositAssetForm
+            onSuccess={handleDepositSuccess}
             preselectedAsset={selectedAssetForDeposit}
           />
         </DialogContent>

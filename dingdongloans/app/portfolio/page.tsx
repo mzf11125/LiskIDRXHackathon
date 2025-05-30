@@ -7,12 +7,14 @@ import { useWallet } from "@/components/wallet-provider"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, TrendingUp, Wallet as WalletIcon, ArrowUpRight, ArrowDownLeft } from "lucide-react"
 import DepositAssetForm from "@/components/deposit-asset-form"
+import WithdrawAssetForm from "@/components/withdraw-asset-form"
 import FlowDiagram from "@/components/flow-diagram"
 import { getUserDeposits } from "@/data/mock-data"
 
 export default function PortfolioPage() {
   const { isConnected, connect } = useWallet()
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false)
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
 
   // Get user deposits
   const userDeposits = getUserDeposits()
@@ -38,6 +40,11 @@ export default function PortfolioPage() {
 
   const handleDepositSuccess = () => {
     setIsDepositDialogOpen(false)
+    // In a real app, you would refresh the deposits data here
+  }
+
+  const handleWithdrawSuccess = () => {
+    setIsWithdrawDialogOpen(false)
     // In a real app, you would refresh the deposits data here
   }
 
@@ -132,16 +139,21 @@ export default function PortfolioPage() {
                           <p className="font-medium">{deposit.amount} {deposit.asset}</p>
                           <p className="text-sm text-slate-400">{deposit.value}</p>
                         </div>
-                        <div className="text-center">
+                        {/* <div className="text-center">
                           <p className="font-medium text-primary">{deposit.apy}</p>
                           <p className="text-sm text-slate-400">APY</p>
                         </div>
                         <div className="text-right">
                           <p className="font-medium text-green-500">+{deposit.earnedInterest}</p>
                           <p className="text-sm text-slate-400">Earned</p>
-                        </div>
+                        </div>                         */}
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" disabled={!deposit.canWithdraw}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!deposit.canWithdraw}
+                            onClick={() => setIsWithdrawDialogOpen(true)}
+                          >
                             Withdraw
                           </Button>
                           <Button size="sm" onClick={() => setIsDepositDialogOpen(true)} className="web3-button">
@@ -241,7 +253,7 @@ export default function PortfolioPage() {
 
       {/* Deposit Dialog */}
       <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-        <DialogContent 
+        <DialogContent
           className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
           style={{ position: "fixed" }}
         >
@@ -254,6 +266,24 @@ export default function PortfolioPage() {
             </DialogDescription>
           </DialogHeader>
           <DepositAssetForm onSuccess={handleDepositSuccess} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw Dialog */}
+      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+        <DialogContent
+          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+          style={{ position: "fixed" }}
+        >
+          <DialogHeader>
+            <DialogTitle className="gradient-text text-xl">
+              Withdraw Assets
+            </DialogTitle>
+            <DialogDescription>
+              Withdraw your deposited assets and earned interest.
+            </DialogDescription>
+          </DialogHeader>
+          <WithdrawAssetForm onSuccess={handleWithdrawSuccess} />
         </DialogContent>
       </Dialog>
     </div>

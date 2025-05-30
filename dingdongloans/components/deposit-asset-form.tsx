@@ -1,19 +1,25 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { lendingABI } from "@/contracts/lendingABI"
 import { Input } from "@/components/ui/input"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Check, Info } from "lucide-react"
-import { pools, addUserDeposit } from "@/data/mock-data"
+import { Check, Info, Loader2, AlertCircle } from "lucide-react"
+import { pools, addUserDeposit, contractAddress, config } from "@/data/mock-data"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useAccount, useBalance, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
+import { erc20Abi, parseUnits, formatUnits, decodeErrorResult } from 'viem'
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { AssetType } from "@/types/platform"
+import { getUserFriendlyError, getTransactionError } from "@/lib/errorHandling"
 
 const formSchema = z.object({
   asset: z.string({
@@ -34,12 +40,54 @@ interface DepositAssetFormProps {
 export default function DepositAssetForm({ onSuccess, preselectedAsset }: DepositAssetFormProps) {
   const { toast } = useToast()
   const [isConfirmStep, setIsConfirmStep] = useState(false)
+  const [assetBalances, setAssetBalances] = useState<Record<string, string>>({});
+  const [loadingBalances, setLoadingBalances] = useState<Record<string, boolean>>({});
+  const { address } = useAccount()
 
-  // Get all available assets from pools
-  const allAssets = pools.flatMap((pool) => pool.assets)
-    .filter((asset, index, self) => 
-      index === self.findIndex((a) => a.symbol === asset.symbol) && asset.supplyEnabled
-    )
+  // Memoize all assets to prevent unnecessary recalculations
+  const allAssets = useMemo(() =>
+    pools.flatMap((pool) => pool.assets)
+      .filter((asset, index, self) =>
+        index === self.findIndex((a) => a.symbol === asset.symbol) && asset.supplyEnabled
+      ),
+    [] // pools is imported from mock-data and doesn't change
+  )
+  // Read all token balances in one call
+  const { data: balanceResults } = useReadContracts({
+    contracts: allAssets
+      .filter(asset => asset.tokenAddress?.startsWith('0x'))
+      .map(asset => ({
+        address: asset.tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address as `0x${string}`],
+      })),
+  })
+
+  // Update balances when contract results change
+  useEffect(() => {
+    const newBalances: Record<string, string> = {};
+    const newLoadingStates: Record<string, boolean> = {};
+
+    // Initialize everything to 0 first
+    allAssets.forEach(asset => {
+      newBalances[asset.symbol] = "0.00";
+      newLoadingStates[asset.symbol] = !!asset.tokenAddress?.startsWith('0x');
+    });
+
+    if (balanceResults) {
+      const tokensWithBalances = allAssets.filter(asset => asset.tokenAddress?.startsWith('0x'));
+      tokensWithBalances.forEach((asset, index) => {
+        if (balanceResults[index] && balanceResults[index].result !== undefined) {
+          newBalances[asset.symbol] = formatUnits(balanceResults[index].result as bigint, asset.units);
+        }
+        newLoadingStates[asset.symbol] = false;
+      });
+    }
+    console.log(balanceResults);
+    setAssetBalances(newBalances);
+    setLoadingBalances(newLoadingStates);
+  }, [balanceResults, allAssets]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -51,17 +99,216 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
 
   const selectedAsset = form.watch("asset")
   const amount = form.watch("amount")
-
   const currentAsset = allAssets.find(asset => asset.symbol === selectedAsset)
-  const depositValue = amount && currentAsset 
+  const depositValue = amount && currentAsset && currentAsset.price
     ? parseFloat(amount) * parseFloat(currentAsset.price.replace(/[^0-9.-]+/g, ""))
     : 0
 
-  const estimatedAnnualEarnings = amount && currentAsset
+  const estimatedAnnualEarnings = amount && currentAsset && currentAsset.supplyApr
     ? parseFloat(amount) * (parseFloat(currentAsset.supplyApr.replace("%", "")) / 100)
     : 0
 
-  function onSubmit(values: FormValues) {
+  // Get the current wallet balance for the selected asset
+  const currentWalletBalance = selectedAsset && assetBalances[selectedAsset]
+    ? assetBalances[selectedAsset]
+    : currentAsset?.walletBalance || "0.00"
+
+  const isLoadingSelectedAssetBalance = selectedAsset && loadingBalances[selectedAsset] || false
+
+  const {
+    data: approvalHash,
+    isPending: isApprovalPending,
+    writeContractAsync: writeApproval,
+    error: approvalError,
+  } = useWriteContract();
+
+  // Approval confirmation
+  const {
+    isLoading: isApprovalConfirming,
+    isSuccess: isApprovalConfirmed,
+    isError: isApprovalFailed,
+  } = useWaitForTransactionReceipt({
+    hash: approvalHash,
+  });
+
+  const {
+    data: depositHash,
+    isPending: isDepositPending,
+    writeContractAsync: writeDeposit,
+    error: depositError,
+  } = useWriteContract();
+
+  // Deposit confirmation
+  const {
+    isLoading: isDepositConfirming,
+    isSuccess: isDepositConfirmed,
+    isError: isDepositFailed,
+  } = useWaitForTransactionReceipt({
+    hash: depositHash,
+  });
+
+  // Combined transaction states
+  const isTransactionInProgress =
+    isApprovalPending || isApprovalConfirming ||
+    isDepositPending || isDepositConfirming;
+
+  const isTransactionSuccess = isDepositConfirmed;
+
+  const isTransactionFailed =
+    (approvalHash && isApprovalFailed) ||
+    (depositHash && isDepositFailed);
+
+  const handleDepositCollateral = async () => {
+    if (!address || !currentAsset?.tokenAddress || !amount) {
+      throw new Error("Address, collateral token, or amount is missing.");
+    }
+
+    try {
+      // Send approval transaction
+      const approveResult = await writeApproval({
+        address: currentAsset.tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [contractAddress, parseUnits(amount, currentAsset.units)],
+      });
+
+      if (!approveResult) {
+        console.error("Failed to submit approval transaction");
+        toast({
+          variant: "destructive",
+          title: "Transaction failed",
+          description: "Failed to submit approval transaction",
+        });
+        return;
+      }
+
+      toast({
+        title: "Approval submitted",
+        description: "Waiting for confirmation...",
+      });
+
+      console.log("Approval transaction submitted:", approveResult);
+
+      // Wait for the approval transaction to be confirmed
+      const approvalReceipt = await waitForTransactionReceipt(config, {
+        hash: approveResult,
+      });
+
+      toast({
+        title: "Approval confirmed",
+        description: `Approval confirmed in block ${approvalReceipt.blockNumber}`,
+      });
+
+      console.log(
+        "Approval confirmed in block:",
+        approvalReceipt.blockNumber
+      );
+
+      // Proceed with the deposit
+      const depositResult = await writeDeposit({
+        address: contractAddress,
+        abi: lendingABI,
+        functionName: "depositCollateral",
+        args: [
+          currentAsset.tokenAddress as `0x${string}`,
+          parseUnits(
+            amount,
+            currentAsset.units
+          ),
+        ],
+      });
+
+      if (!depositResult) {
+        console.error("Failed to submit deposit transaction");
+        toast({
+          variant: "destructive",
+          title: "Transaction failed",
+          description: "Failed to submit deposit transaction",
+        });
+        return;
+      }
+
+      toast({
+        title: "Deposit submitted",
+        description: "Waiting for confirmation...",
+      });
+
+      console.log("Deposit transaction submitted:", depositResult);
+
+      // Wait for deposit transaction to be confirmed
+      const depositReceipt = await waitForTransactionReceipt(config, {
+        hash: depositResult,
+      });
+
+      toast({
+        title: "Deposit successful!",
+        description: `You have successfully deposited ${amount} ${currentAsset.symbol} and started earning ${currentAsset.supplyApr} APY.`,
+      });
+
+      console.log(
+        "Deposit confirmed in block:",
+        depositReceipt.blockNumber
+      );
+
+      onSuccess();
+    } catch (error) {
+      console.error("Transaction sequence failed:", error);
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const match = errorMessage.match(/data="([^"]+)"/);
+
+      if (match && match[1]) {
+        const parsedError = match[1].split(",")[0]; // Extract the first part separated by commas
+        try {
+          const decodedError = decodeErrorResult({
+            abi: lendingABI,
+            data: parsedError as `0x${string}`,
+          });
+
+          // Get user-friendly error message based on error name
+          const userMessage = getUserFriendlyError(decodedError.errorName);
+
+          console.error("Transaction failed:", {
+            errorName: decodedError.errorName,
+            args: decodedError.args,
+            userMessage,
+          });
+
+          toast({
+            variant: "destructive",
+            title: "Transaction failed",
+            description: userMessage,
+          });
+        } catch (decodeError) {
+          console.error("Failed to decode contract error:", {
+            original: errorMessage,
+            parsed: parsedError,
+            decodeError,
+          });
+
+          toast({
+            variant: "destructive",
+            title: "Transaction failed",
+            description: "Failed to decode contract error",
+          });
+        }
+      } else {
+        // Handle non-contract errors (e.g. network errors, user rejected, etc)
+        const friendlyMessage = getTransactionError(errorMessage);
+        console.error("Transaction failed:", friendlyMessage);
+
+        toast({
+          variant: "destructive",
+          title: "Transaction failed",
+          description: friendlyMessage,
+        });
+      }
+
+      // Call onSuccess to close the form even if transaction fails
+      onSuccess();
+    }
+  };
+  async function onSubmit(values: FormValues) {
     if (!isConfirmStep) {
       setIsConfirmStep(true)
       return
@@ -71,7 +318,12 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
     const asset = allAssets.find(a => a.symbol === values.asset)
     if (!asset) return
 
-    const walletBalance = parseFloat(asset.walletBalance.replace(/,/g, ""))
+    // Only use the real balance from the connected wallet
+    const balanceToUse = values.asset && assetBalances[values.asset]
+      ? assetBalances[values.asset]
+      : "0.00"
+
+    const walletBalance = parseFloat(balanceToUse.replace(/,/g, ""))
     const depositAmount = parseFloat(values.amount)
 
     if (depositAmount > walletBalance) {
@@ -83,19 +335,14 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
       return
     }
 
-    // Add the deposit (in a real app, this would be a blockchain transaction)
-    addUserDeposit({
-      asset: values.asset,
-      amount: values.amount,
-      apy: asset.supplyApr,
-    })
-
-    toast({
-      title: "Deposit successful!",
-      description: `You have successfully deposited ${values.amount} ${values.asset} and started earning ${asset.supplyApr} APY.`,
-    })
-
-    onSuccess()
+    // Handle the deposit process with all transaction states
+    try {
+      await handleDepositCollateral();
+      // Success toast is handled in handleDepositCollateral
+    } catch (error) {
+      console.error("Failed to complete deposit:", error);
+      // Error handling is done in handleDepositCollateral
+    }
   }
 
   return (
@@ -170,19 +417,31 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                       </FormControl>
                       <Button
                         type="button"
-                        variant="outline"
-                        onClick={() => {
+                        variant="outline" onClick={() => {
                           if (currentAsset) {
-                            field.onChange(currentAsset.walletBalance.replace(/,/g, ""))
+                            // Use real balance if available, otherwise fallback to mock data
+                            const balance = currentWalletBalance.replace(/,/g, "");
+                            field.onChange(balance);
                           }
                         }}
                         className="px-3 bg-slate-700 border-slate-600"
+                        disabled={isLoadingSelectedAssetBalance}
                       >
-                        Max
+                        {isLoadingSelectedAssetBalance ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Max"
+                        )}
                       </Button>
                     </div>
-                    <FormDescription>
-                      Wallet balance: {currentAsset?.walletBalance || "0.00"} {selectedAsset}
+                    <FormDescription className="flex items-center gap-2">
+                      Wallet balance: {isLoadingSelectedAssetBalance ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Loading...
+                        </span>
+                      ) : (
+                        `${currentWalletBalance} ${selectedAsset}`
+                      )}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -198,7 +457,7 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                       <span className="text-slate-400">Deposit Value</span>
                       <span className="font-bold">${depositValue.toFixed(2)}</span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Current APY</span>
                       <span className="font-bold text-primary">{currentAsset?.supplyApr}</span>
@@ -228,8 +487,40 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
               </Card>
             )}
           </>
-        ) : (
-          <div className="space-y-6">
+        ) : (<div className="space-y-6">
+          {isTransactionInProgress ? (
+            <div className="p-4 bg-blue-950/30 border border-blue-800/50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                <h3 className="text-lg font-medium text-blue-400">
+                  {isApprovalPending || isApprovalConfirming
+                    ? "Approving Token Transfer"
+                    : isDepositPending || isDepositConfirming
+                      ? "Depositing Assets"
+                      : "Processing Transaction"}
+                </h3>
+              </div>
+              <p className="text-slate-300 text-sm">
+                {isApprovalPending
+                  ? "Please confirm the approval transaction in your wallet..."
+                  : isApprovalConfirming
+                    ? "Waiting for the approval transaction to be confirmed on the blockchain..."
+                    : isDepositPending
+                      ? "Please confirm the deposit transaction in your wallet..."
+                      : "Waiting for the deposit transaction to be confirmed on the blockchain..."}
+              </p>
+            </div>
+          ) : isTransactionFailed ? (
+            <div className="p-4 bg-red-950/30 border border-red-800/50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                <h3 className="text-lg font-medium text-red-400">Transaction Failed</h3>
+              </div>
+              <p className="text-slate-300 text-sm">
+                Your transaction couldn't be completed. Please try again or check your wallet for details.
+              </p>
+            </div>
+          ) : (
             <div className="p-4 bg-green-950/30 border border-green-800/50 rounded-md">
               <div className="flex items-center gap-2 mb-2">
                 <Check className="h-5 w-5 text-green-500" />
@@ -239,50 +530,75 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                 Please review the details of your deposit before confirming. Once confirmed, you'll start earning interest immediately.
               </p>
             </div>
+          )}
 
-            <Card className="bg-slate-800 border-slate-700">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-y-3">
-                    <div className="text-slate-400">You are depositing:</div>
-                    <div className="font-medium text-right">
-                      {amount} {selectedAsset}
-                    </div>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-y-3">
+                  <div className="text-slate-400">You are depositing:</div>
+                  <div className="font-medium text-right">
+                    {amount} {selectedAsset}
+                  </div>
 
-                    <div className="text-slate-400">Deposit value:</div>
-                    <div className="font-medium text-right">
-                      ${depositValue.toFixed(2)}
-                    </div>
+                  <div className="text-slate-400">Deposit value:</div>
+                  <div className="font-medium text-right">
+                    ${depositValue.toFixed(2)}
+                  </div>
 
-                    <div className="text-slate-400">APY:</div>
-                    <div className="font-medium text-right text-primary">
-                      {currentAsset?.supplyApr}
-                    </div>
+                  <div className="text-slate-400">APY:</div>
+                  <div className="font-medium text-right text-primary">
+                    {currentAsset?.supplyApr}
+                  </div>
 
-                    <div className="text-slate-400">Estimated annual earnings:</div>
-                    <div className="font-medium text-right text-green-500">
-                      {estimatedAnnualEarnings.toFixed(2)} {selectedAsset}
-                    </div>
+                  <div className="text-slate-400">Estimated annual earnings:</div>
+                  <div className="font-medium text-right text-green-500">
+                    {estimatedAnnualEarnings.toFixed(2)} {selectedAsset}
+                  </div>
 
-                    <div className="text-slate-400">Can be used as collateral:</div>
-                    <div className="font-medium text-right">
-                      Up to {currentAsset?.collateralFactor} of value
-                    </div>
+                  <div className="text-slate-400">Can be used as collateral:</div>
+                  <div className="font-medium text-right">
+                    Up to {currentAsset?.collateralFactor} of value
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3">
+                
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        )}        <div className="flex justify-end gap-3">
           {isConfirmStep ? (
             <>
-              <Button type="button" variant="outline" onClick={() => setIsConfirmStep(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsConfirmStep(false)}
+                disabled={isTransactionInProgress}
+              >
                 Back
               </Button>
-              <Button type="submit" className="web3-button">
-                Confirm Deposit
+              <Button
+                type="submit"
+                className="web3-button"
+                disabled={isTransactionInProgress}
+              >
+                {isTransactionInProgress ? (
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    {isApprovalPending || isApprovalConfirming
+                      ? "Approving..."
+                      : isDepositPending || isDepositConfirming
+                        ? "Depositing..."
+                        : "Processing..."}
+                  </div>
+                ) : isTransactionFailed ? (
+                  <div className="flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Try Again
+                  </div>
+                ) : (
+                  "Confirm Deposit"
+                )}
               </Button>
             </>
           ) : (
@@ -301,6 +617,6 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
           )}
         </div>
       </form>
-    </Form>
+    </Form >
   )
 }

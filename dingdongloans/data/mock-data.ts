@@ -1,4 +1,13 @@
-import type { PoolType, BorrowerType, SupplyTransactionType, UserSupplyType } from "@/types/platform";
+import type {
+	PoolType,
+	BorrowerType,
+	SupplyTransactionType,
+	UserSupplyType,
+} from "@/types/platform";
+
+import { defaultConfig } from "@xellar/kit";
+import { liskSepolia } from "viem/chains";
+import type { Config } from "wagmi";
 
 export const pools: PoolType[] = [
 	{
@@ -21,24 +30,13 @@ export const pools: PoolType[] = [
 				apr: "8.2%",
 				supplyApr: "6.5%",
 				walletBalance: "1000.00",
+				tokenAddress: "0xfD498EF2a4A07189c715f43BA1Af8429C3af9B4d",
 				available: "100,000,000",
 				supplied: "75,000,000",
 				collateralFactor: "80%",
 				supplyEnabled: true,
 				borrowEnabled: true,
-			},
-			{
-				symbol: "LSK",
-				name: "Lisk",
-				price: "$2.50",
-				apr: "5.7%",
-				supplyApr: "4.2%",
-				walletBalance: "50.00",
-				available: "25,000,000",
-				supplied: "18,750,000",
-				collateralFactor: "75%",
-				supplyEnabled: true,
-				borrowEnabled: true,
+				units: 2,
 			},
 			{
 				symbol: "BTC",
@@ -46,12 +44,14 @@ export const pools: PoolType[] = [
 				price: "$60,000.00",
 				apr: "3.2%",
 				supplyApr: "2.1%",
+				tokenAddress: " 0xC4f88D43C0f9426E1De9CC6380d87a458Bb239b6",
 				walletBalance: "0.05",
 				available: "1,000",
 				supplied: "750",
 				collateralFactor: "70%",
 				supplyEnabled: true,
 				borrowEnabled: true,
+				units: 8,
 			},
 			{
 				symbol: "ETH",
@@ -59,12 +59,29 @@ export const pools: PoolType[] = [
 				price: "$3,000.00",
 				apr: "4.5%",
 				supplyApr: "3.1%",
+				tokenAddress: "0x07BFd7D84aB09e0A6DB8307E906F4edEaAC9a70c",
 				walletBalance: "1.20",
 				available: "10,000",
 				supplied: "7,500",
 				collateralFactor: "75%",
 				supplyEnabled: true,
 				borrowEnabled: true,
+				units: 18,
+			},
+			{
+				symbol: "USDT",
+				name: "Tether",
+				price: "$1.00",
+				apr: "8.0%",
+				supplyApr: "6.2%",
+				walletBalance: "5000.00",
+				tokenAddress: "0x2728DD8B45B788e26d12B13Db5A244e5403e7eda",
+				available: "50,000,000",
+				supplied: "35,000,000",
+				collateralFactor: "85%",
+				supplyEnabled: true,
+				borrowEnabled: true,
+				units: 18,
 			},
 		],
 		proposals: [
@@ -92,171 +109,6 @@ export const pools: PoolType[] = [
 				startDate: "2023-03-15",
 				endDate: "2023-03-30",
 				executionDate: "2023-04-02",
-			},
-		],
-	},
-	{
-		id: "lisk-enterprise",
-		name: "Lisk Enterprise Pool",
-		company: "Lisk Enterprise Solutions",
-		description:
-			"Specialized lending pool for enterprise clients with KYC requirements",
-		tvl: "$250M",
-		totalBorrowed: "$120M",
-		utilizationRate: "48.0%",
-		riskLevel: "medium",
-		createdAt: "2023-02-20",
-		logoUrl: "/placeholder.svg?height=100&width=100",
-		borrowerRequirements: {
-			minCollateral: "$100,000",
-			kycRequired: true,
-			whitelistRequired: true,
-		},
-		assets: [
-			{
-				symbol: "LSK",
-				name: "Lisk",
-				price: "$2.50",
-				apr: "6.5%",
-				supplyApr: "5.0%",
-				walletBalance: "50.00",
-				available: "10,000,000",
-				supplied: "8,000,000",
-				collateralFactor: "80%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-			{
-				symbol: "IDRX",
-				name: "IDRX Token",
-				price: "$1.00",
-				apr: "9.0%",
-				supplyApr: "7.5%",
-				walletBalance: "1000.00",
-				available: "50,000,000",
-				supplied: "42,500,000",
-				collateralFactor: "85%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-			{
-				symbol: "USDC",
-				name: "USD Coin",
-				price: "$1.00",
-				apr: "7.5%",
-				supplyApr: "6.0%",
-				walletBalance: "2000.00",
-				available: "30,000,000",
-				supplied: "25,000,000",
-				collateralFactor: "90%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-		],
-		proposals: [
-			{
-				id: "prop-e1",
-				title: "Enterprise Borrowing Limit Increase",
-				description:
-					"Increase the maximum borrowing limit for enterprise clients",
-				proposer: "lsk5678901234abcdef",
-				status: "pending",
-				votesFor: 0,
-				votesAgainst: 0,
-				startDate: "2023-04-10",
-				endDate: "2023-04-25",
-			},
-		],
-	},
-	{
-		id: "defi-alliance",
-		name: "DeFi Alliance Pool",
-		company: "DeFi Alliance",
-		description:
-			"Collaborative pool between multiple DeFi protocols with high yields",
-		tvl: "$420M",
-		totalBorrowed: "$210M",
-		utilizationRate: "50.0%",
-		riskLevel: "high",
-		createdAt: "2023-03-05",
-		logoUrl: "/placeholder.svg?height=100&width=100",
-		assets: [
-			{
-				symbol: "ETH",
-				name: "Ethereum",
-				price: "$3,000.00",
-				apr: "5.5%",
-				supplyApr: "4.0%",
-				walletBalance: "1.20",
-				available: "5,000",
-				supplied: "3,750",
-				collateralFactor: "70%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-			{
-				symbol: "BTC",
-				name: "Bitcoin",
-				price: "$60,000.00",
-				apr: "4.2%",
-				supplyApr: "3.0%",
-				walletBalance: "0.05",
-				available: "500",
-				supplied: "375",
-				collateralFactor: "65%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-			{
-				symbol: "IDRX",
-				name: "IDRX Token",
-				price: "$1.00",
-				apr: "12.0%",
-				supplyApr: "10.0%",
-				walletBalance: "1000.00",
-				available: "20,000,000",
-				supplied: "15,000,000",
-				collateralFactor: "75%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-			{
-				symbol: "DAI",
-				name: "Dai Stablecoin",
-				price: "$1.00",
-				apr: "10.5%",
-				supplyApr: "8.0%",
-				walletBalance: "1500.00",
-				available: "15,000,000",
-				supplied: "12,000,000",
-				collateralFactor: "85%",
-				supplyEnabled: true,
-				borrowEnabled: true,
-			},
-		],
-		proposals: [
-			{
-				id: "prop-d1",
-				title: "Add Compound Integration",
-				description:
-					"Integrate with Compound protocol for additional yield strategies",
-				proposer: "lsk2468013579abcdef",
-				status: "active",
-				votesFor: 800000,
-				votesAgainst: 200000,
-				startDate: "2023-03-25",
-				endDate: "2023-04-10",
-			},
-			{
-				id: "prop-d2",
-				title: "Risk Parameter Adjustment",
-				description: "Adjust risk parameters for high-yield assets",
-				proposer: "lsk1357924680abcdef",
-				status: "rejected",
-				votesFor: 500000,
-				votesAgainst: 700000,
-				startDate: "2023-03-10",
-				endDate: "2023-03-25",
 			},
 		],
 	},
@@ -439,3 +291,16 @@ export const addUserDeposit = (deposit: {
 export function getAllPools(): PoolType[] {
 	return pools;
 }
+
+export const contractAddress = "0x1C5025C66FC6d8F36f48cac97Ea5120A61ba8EA5";
+
+export const config = defaultConfig({
+	appName: "Ding Dong Loans", // You can customize your app name
+	walletConnectProjectId:
+		process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
+	xellarAppId: process.env.NEXT_PUBLIC_XELLAR_APP_ID || "",
+	xellarEnv: "sandbox", // Or "production"
+	ssr: true, // Required for Next.js App Router
+	syncConnectedChain: false,
+	chains: [liskSepolia], // Add your desired chains here
+}) as Config;

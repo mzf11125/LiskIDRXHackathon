@@ -19,44 +19,11 @@ import {
 } from "@xellar/kit";
 import axios from "axios";
 import { liskSepolia } from "viem/chains";
+import { config } from "@/data/mock-data";
 
 // Define config and queryClient for XellarKit/Wagmi
 // TODO: Replace with your actual project IDs
-const config = defaultConfig({
-	appName: "Ding Dong Loans", // You can customize your app name
-	walletConnectProjectId:
-		process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
-	xellarAppId: process.env.NEXT_PUBLIC_XELLAR_APP_ID || "",
-	xellarEnv: "production", // Or "production"
-	ssr: true, // Required for Next.js App Router
 
-	chains: [
-		{
-			id: 4202,
-			name: "Lisk Sepolia Testnet",
-			nativeCurrency: {
-				name: "Sepolia Ether",
-				symbol: "ETH",
-				decimals: 18,
-			},
-			rpcUrls: {
-				default: {
-					http: ["https://rpc.sepolia-api.lisk.com"],
-				},
-				public: {
-					http: ["https://rpc.sepolia-api.lisk.com"],
-				},
-			},
-			blockExplorers: {
-				default: {
-					name: "Lisk Blockscout",
-					url: "https://sepolia-blockscout.lisk.com",
-				},
-			},
-			testnet: true,
-		},
-	], // Add your desired chains here
-}) as Config;
 
 const queryClient = new QueryClient();
 
@@ -77,7 +44,7 @@ const WalletContext = createContext<WalletContextType>({
 			"Connect function should be triggered by XellarKit UI components."
 		);
 	},
-	disconnect: () => {},
+	disconnect: () => { },
 });
 
 export const useWallet = () => useContext(WalletContext);
@@ -198,7 +165,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 			<QueryClientProvider client={queryClient}>
 				<XellarKitProvider
 					theme={darkTheme}
-					showConfirmationModal={true}
+					showConfirmationModal={false}
 				>
 					<WalletStateController>{children}</WalletStateController>
 				</XellarKitProvider>

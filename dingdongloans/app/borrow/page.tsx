@@ -250,22 +250,22 @@ export default function BorrowPage() {
                 {pools[0].assets
                   .filter(asset => asset.symbol === "IDRX") // Only show IDRX for borrowing
                   .map((asset) => (
-                  <div key={asset.symbol} className="flex justify-between items-center p-3 bg-slate-800 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                        <Image src={`/placeholder.svg?height=32&width=32`} alt={asset.symbol} width={32} height={32} />
+                    <div key={asset.symbol} className="flex justify-between items-center p-3 bg-slate-800 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
+                          <Image src={`/placeholder.svg?height=32&width=32`} alt={asset.symbol} width={32} height={32} />
+                        </div>
+                        <div>
+                          <div className="font-medium">{asset.symbol}</div>
+                          <div className="text-xs text-slate-400">{asset.name}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium">{asset.symbol}</div>
-                        <div className="text-xs text-slate-400">{asset.name}</div>
+                      <div className="text-right">
+                        <div className="font-medium">{asset.apr}</div>
+                        <div className="text-xs text-slate-400">Variable APR</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">{asset.apr}</div>
-                      <div className="text-xs text-slate-400">Variable APR</div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
                 <div className="pt-2">
                   <div className="text-sm text-slate-400 p-2 bg-slate-800/50 rounded-lg">
                     📢 Currently, only IDRX is available for borrowing. Other assets can be used as collateral.
@@ -299,8 +299,7 @@ export default function BorrowPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent
-                className="web3-card sm:max-w-[800px] max-h-[90vh] overflow-y-auto"
-                style={{ position: "fixed" }}
+                className="web3-card sm:max-w-[800px] max-h-[90vh] overflow-hidden"
               >
                 <DialogHeader>
                   <DialogTitle className="gradient-text text-xl">Create Business Proposal</DialogTitle>
@@ -308,7 +307,7 @@ export default function BorrowPage() {
                     Fill out the form below to create a new business proposal for funding.
                   </DialogDescription>
                 </DialogHeader>
-                <CreateProposalForm onSuccess={() => setIsCreateDialogOpen(false)} />
+                  <CreateProposalForm onSuccess={() => setIsCreateDialogOpen(false)} />
               </DialogContent>
             </Dialog>
           </div>
