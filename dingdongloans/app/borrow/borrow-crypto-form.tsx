@@ -1,21 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Info, AlertTriangle, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { useToast } from "@/components/ui/use-toast"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Separator } from "@/components/ui/separator"
-import { Card, CardContent } from "@/components/ui/card"
-import { pools } from "@/data/mock-data"
-import { useWallet } from "@/components/wallet-provider"
-import { Progress } from "@/components/ui/progress"
+import { useState, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Info, AlertTriangle, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
+import { pools } from "@/data/mock-data";
+import { useWallet } from "@/components/wallet-provider";
+import { Progress } from "@/components/ui/progress";
 
 const formSchema = z.object({
   borrowAsset: z.string({
@@ -33,12 +52,12 @@ const formSchema = z.object({
   loanTerm: z.string({
     required_error: "Please select a loan term.",
   }),
-})
+});
 
-type FormValues = z.infer<typeof formSchema>
+type FormValues = z.infer<typeof formSchema>;
 
 interface BorrowCryptoFormProps {
-  onSuccess: () => void
+  onSuccess: () => void;
 }
 
 // Helper function to format currency
@@ -48,24 +67,24 @@ const formatCurrency = (value: number): string => {
     currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value)
-}
+  }).format(value);
+};
 
 export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
-  const { toast } = useToast()
-  const { address } = useWallet()
+  const { toast } = useToast();
+  const { address } = useWallet();
 
   // Get all available assets from pools
-  const allAssets = pools.flatMap((pool) => pool.assets)
+  const allAssets = pools.flatMap((pool) => pool.assets);
 
   // State for calculated values
-  const [collateralizationRatio, setCollateralizationRatio] = useState(200)
-  const [borrowValue, setBorrowValue] = useState(0)
-  const [collateralValue, setCollateralValue] = useState(0)
-  const [liquidationPrice, setLiquidationPrice] = useState(0)
-  const [interestRate, setInterestRate] = useState(0)
-  const [healthFactor, setHealthFactor] = useState(0)
-  const [isConfirmStep, setIsConfirmStep] = useState(false)
+  const [collateralizationRatio, setCollateralizationRatio] = useState(200);
+  const [borrowValue, setBorrowValue] = useState(0);
+  const [collateralValue, setCollateralValue] = useState(0);
+  const [liquidationPrice, setLiquidationPrice] = useState(0);
+  const [interestRate, setInterestRate] = useState(0);
+  const [healthFactor, setHealthFactor] = useState(0);
+  const [isConfirmStep, setIsConfirmStep] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -76,14 +95,14 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
       collateralAmount: "",
       loanTerm: "30",
     },
-  })
+  });
 
   // Watch form values to update calculations
-  const borrowAsset = form.watch("borrowAsset")
-  const borrowAmount = form.watch("borrowAmount")
-  const collateralAsset = form.watch("collateralAsset")
-  const collateralAmount = form.watch("collateralAmount")
-  const loanTerm = form.watch("loanTerm")
+  const borrowAsset = form.watch("borrowAsset");
+  const borrowAmount = form.watch("borrowAmount");
+  const collateralAsset = form.watch("collateralAsset");
+  const collateralAmount = form.watch("collateralAmount");
+  const loanTerm = form.watch("loanTerm");
 
   // Update calculations when form values change
   useEffect(() => {
@@ -93,71 +112,91 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
         allAssets
           .find((a) => a.symbol === borrowAsset)
           ?.price.replace("$", "")
-          .replace(",", "") || "0",
-      )
+          .replace(",", "") || "0"
+      );
       const collateralAssetPrice = Number.parseFloat(
         allAssets
           .find((a) => a.symbol === collateralAsset)
           ?.price.replace("$", "")
-          .replace(",", "") || "0",
-      )
+          .replace(",", "") || "0"
+      );
 
-      const borrowAmountValue = Number.parseFloat(borrowAmount) * borrowAssetPrice
-      const collateralAmountValue = Number.parseFloat(collateralAmount) * collateralAssetPrice
+      const borrowAmountValue =
+        Number.parseFloat(borrowAmount) * borrowAssetPrice;
+      const collateralAmountValue =
+        Number.parseFloat(collateralAmount) * collateralAssetPrice;
 
-      setBorrowValue(borrowAmountValue)
-      setCollateralValue(collateralAmountValue)
+      setBorrowValue(borrowAmountValue);
+      setCollateralValue(collateralAmountValue);
 
       // Calculate collateralization ratio
-      const ratio = (collateralAmountValue / borrowAmountValue) * 100
-      setCollateralizationRatio(Math.round(ratio))
+      const ratio = (collateralAmountValue / borrowAmountValue) * 100;
+      setCollateralizationRatio(Math.round(ratio));
 
       // Calculate liquidation price (simplified)
-      const minRatio = 150 // Minimum collateralization ratio before liquidation
-      const liquidationPriceValue = (borrowAmountValue * minRatio) / 100 / Number.parseFloat(collateralAmount)
-      setLiquidationPrice(liquidationPriceValue)
+      const minRatio = 150; // Minimum collateralization ratio before liquidation
+      const liquidationPriceValue =
+        (borrowAmountValue * minRatio) /
+        100 /
+        Number.parseFloat(collateralAmount);
+      setLiquidationPrice(liquidationPriceValue);
 
       // Set interest rate based on asset and term
-      const baseRate = Number.parseFloat(allAssets.find((a) => a.symbol === borrowAsset)?.apr.replace("%", "") || "0")
-      const termMultiplier = Number.parseInt(loanTerm) === 30 ? 1 : Number.parseInt(loanTerm) === 90 ? 0.95 : 0.9
-      setInterestRate(baseRate * termMultiplier)
+      const baseRate = Number.parseFloat(
+        allAssets.find((a) => a.symbol === borrowAsset)?.apr.replace("%", "") ||
+          "0"
+      );
+      const termMultiplier =
+        Number.parseInt(loanTerm) === 30
+          ? 1
+          : Number.parseInt(loanTerm) === 90
+          ? 0.95
+          : 0.9;
+      setInterestRate(baseRate * termMultiplier);
 
       // Calculate health factor (higher is better)
-      const health = ratio / minRatio
-      setHealthFactor(health)
+      const health = ratio / minRatio;
+      setHealthFactor(health);
     }
-  }, [borrowAsset, borrowAmount, collateralAsset, collateralAmount, loanTerm, allAssets])
+  }, [
+    borrowAsset,
+    borrowAmount,
+    collateralAsset,
+    collateralAmount,
+    loanTerm,
+    allAssets,
+  ]);
 
   function onSubmit(values: FormValues) {
     if (!isConfirmStep) {
-      setIsConfirmStep(true)
-      return
+      setIsConfirmStep(true);
+      return;
     }
 
     // In a real app, this would send the transaction to the blockchain
-    console.log(values)
+    console.log(values);
 
     toast({
       title: "Loan Created",
       description: `You have successfully borrowed ${values.borrowAmount} ${values.borrowAsset}`,
-    })
+    });
 
-    onSuccess()
+    onSuccess();
   }
 
   // Get health factor color
   const getHealthColor = () => {
-    if (healthFactor >= 1.5) return "text-green-500"
-    if (healthFactor >= 1.2) return "text-yellow-500"
-    return "text-red-500"
-  }
+    if (healthFactor >= 1.5) return "text-green-500";
+    if (healthFactor >= 1.2) return "text-yellow-500";
+    return "text-red-500";
+  };
 
   // Get health factor label
   const getHealthLabel = () => {
-    if (healthFactor >= 1.5) return "Safe"
-    if (healthFactor >= 1.2) return "Moderate"
-    return "At Risk"
-  }
+    if (healthFactor >= 1.5) return "Safe";
+    if (healthFactor >= 1.2) return "Moderate";
+    return "At Risk";
+  };
 
   return (
     <Form {...form}>
@@ -172,7 +211,10 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Asset to Borrow</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="bg-slate-800 border-slate-700">
                             <SelectValue placeholder="Select asset" />
@@ -182,19 +224,28 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                           {allAssets
                             .filter(
                               (asset, index, self) =>
-                                index === self.findIndex((a) => a.symbol === asset.symbol) && 
-                                asset.supplyEnabled && 
+                                index ===
+                                  self.findIndex(
+                                    (a) => a.symbol === asset.symbol
+                                  ) &&
+                                asset.borrowEnabled &&
                                 asset.symbol === "IDRX" // Only allow IDRX for borrowing
                             )
                             .map((asset) => (
-                              <SelectItem key={asset.symbol} value={asset.symbol}>
+                              <SelectItem
+                                key={asset.symbol}
+                                value={asset.symbol}
+                              >
                                 {asset.symbol} - {asset.name}
                               </SelectItem>
                             ))}
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Current rate: {borrowAsset ? allAssets.find((a) => a.symbol === borrowAsset)?.apr : "8.2% (IDRX only)"}
+                        Only IDRX is available for borrowing. Current rate:{" "}
+                        {borrowAsset
+                          ? allAssets.find((a) => a.symbol === borrowAsset)?.apr
+                          : "8.2%"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -218,7 +269,11 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                         />
                       </FormControl>
                       <FormDescription>
-                        Available: {borrowAsset ? allAssets.find((a) => a.symbol === borrowAsset)?.available : "IDRX only available for borrowing"}
+                        Available:{" "}
+                        {borrowAsset
+                          ? allAssets.find((a) => a.symbol === borrowAsset)
+                              ?.available
+                          : "Select IDRX to view availability"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -233,7 +288,10 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Collateral Asset</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="bg-slate-800 border-slate-700">
                             <SelectValue placeholder="Select collateral" />
@@ -243,11 +301,20 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                           {allAssets
                             .filter(
                               (asset, index, self) =>
-                                index === self.findIndex((a) => a.symbol === asset.symbol) && asset.supplyEnabled,
+                                index ===
+                                  self.findIndex(
+                                    (a) => a.symbol === asset.symbol
+                                  ) && asset.supplyEnabled // All supported assets can be used as collateral
                             )
                             .map((asset) => (
-                              <SelectItem key={asset.symbol} value={asset.symbol}>
+                              <SelectItem
+                                key={asset.symbol}
+                                value={asset.symbol}
+                              >
                                 {asset.symbol} - {asset.name}
+                                {asset.symbol === "IDRX"
+                                  ? " (Can also earn interest)"
+                                  : " (Collateral only)"}
                               </SelectItem>
                             ))}
                         </SelectContent>
@@ -255,7 +322,8 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                       <FormDescription>
                         Collateral factor:{" "}
                         {collateralAsset
-                          ? allAssets.find((a) => a.symbol === collateralAsset)?.collateralFactor
+                          ? allAssets.find((a) => a.symbol === collateralAsset)
+                              ?.collateralFactor
                           : "N/A"}
                       </FormDescription>
                       <FormMessage />
@@ -281,7 +349,10 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                       </FormControl>
                       <FormDescription>
                         Wallet balance:{" "}
-                        {collateralAsset ? allAssets.find((a) => a.symbol === collateralAsset)?.walletBalance : "N/A"}
+                        {collateralAsset
+                          ? allAssets.find((a) => a.symbol === collateralAsset)
+                              ?.walletBalance
+                          : "N/A"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -295,7 +366,10 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loan Term</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger className="bg-slate-800 border-slate-700">
                           <SelectValue placeholder="Select term" />
@@ -307,7 +381,9 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                         <SelectItem value="180">180 days</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>Longer terms may have different interest rates</FormDescription>
+                    <FormDescription>
+                      Longer terms may have different interest rates
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -328,13 +404,16 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-800 border-slate-700">
                               <p className="max-w-xs">
-                                The ratio between your collateral value and borrowed value. Higher is safer.
+                                The ratio between your collateral value and
+                                borrowed value. Higher is safer.
                               </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <span className="font-bold">{collateralizationRatio}%</span>
+                      <span className="font-bold">
+                        {collateralizationRatio}%
+                      </span>
                     </div>
 
                     <div>
@@ -342,7 +421,11 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                         <span className="text-red-400">Liquidation</span>
                         <span className="text-green-400">Safe</span>
                       </div>
-                      <Progress value={Math.min(collateralizationRatio, 300)} max={300} className="h-2 bg-slate-700" />
+                      <Progress
+                        value={Math.min(collateralizationRatio, 300)}
+                        max={300}
+                        className="h-2 bg-slate-700"
+                      />
                       <div className="flex justify-between text-xs mt-1">
                         <span>150%</span>
                         <span>300%</span>
@@ -351,32 +434,52 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
 
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div>
-                        <div className="text-sm text-slate-400">Borrow Value</div>
-                        <div className="font-medium">{formatCurrency(borrowValue)}</div>
+                        <div className="text-sm text-slate-400">
+                          Borrow Value
+                        </div>
+                        <div className="font-medium">
+                          {formatCurrency(borrowValue)}
+                        </div>
                       </div>
                       <div>
-                        <div className="text-sm text-slate-400">Collateral Value</div>
-                        <div className="font-medium">{formatCurrency(collateralValue)}</div>
+                        <div className="text-sm text-slate-400">
+                          Collateral Value
+                        </div>
+                        <div className="font-medium">
+                          {formatCurrency(collateralValue)}
+                        </div>
                       </div>
                       <div>
-                        <div className="text-sm text-slate-400">Liquidation Price</div>
+                        <div className="text-sm text-slate-400">
+                          Liquidation Price
+                        </div>
                         <div className="font-medium">
                           ${liquidationPrice.toFixed(2)} per {collateralAsset}
                         </div>
                       </div>
                       <div>
-                        <div className="text-sm text-slate-400">Interest Rate</div>
-                        <div className="font-medium">{interestRate.toFixed(2)}% APR</div>
+                        <div className="text-sm text-slate-400">
+                          Interest Rate
+                        </div>
+                        <div className="font-medium">
+                          {interestRate.toFixed(2)}% APR
+                        </div>
                       </div>
                       <div>
-                        <div className="text-sm text-slate-400">Health Factor</div>
+                        <div className="text-sm text-slate-400">
+                          Health Factor
+                        </div>
                         <div className={`font-medium ${getHealthColor()}`}>
                           {healthFactor.toFixed(2)} ({getHealthLabel()})
                         </div>
                       </div>
                       <div>
-                        <div className="text-sm text-slate-400">Estimated Fee</div>
-                        <div className="font-medium">{formatCurrency(borrowValue * 0.001)}</div>
+                        <div className="text-sm text-slate-400">
+                          Estimated Fee
+                        </div>
+                        <div className="font-medium">
+                          {formatCurrency(borrowValue * 0.001)}
+                        </div>
                       </div>
                     </div>
 
@@ -384,10 +487,13 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                       <div className="flex items-start gap-2 p-3 bg-red-950/30 border border-red-800/50 rounded-md mt-2">
                         <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                         <div className="text-sm">
-                          <p className="font-medium text-red-400">Warning: High Liquidation Risk</p>
+                          <p className="font-medium text-red-400">
+                            Warning: High Liquidation Risk
+                          </p>
                           <p className="text-slate-300">
-                            Your health factor is low. Consider increasing your collateral or reducing your borrow
-                            amount to avoid liquidation.
+                            Your health factor is low. Consider increasing your
+                            collateral or reducing your borrow amount to avoid
+                            liquidation.
                           </p>
                         </div>
                       </div>
@@ -402,11 +508,13 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
             <div className="p-4 bg-green-950/30 border border-green-800/50 rounded-md">
               <div className="flex items-center gap-2 mb-2">
                 <Check className="h-5 w-5 text-green-500" />
-                <h3 className="text-lg font-medium text-green-400">Confirm Your Loan</h3>
+                <h3 className="text-lg font-medium text-green-400">
+                  Confirm Your Loan
+                </h3>
               </div>
               <p className="text-slate-300 text-sm">
-                Please review the details of your loan before confirming. Once confirmed, the transaction will be sent
-                to the blockchain.
+                Please review the details of your loan before confirming. Once
+                confirmed, the transaction will be sent to the blockchain.
               </p>
             </div>
 
@@ -425,16 +533,26 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                     </div>
 
                     <div className="text-slate-400">Loan term:</div>
-                    <div className="font-medium text-right">{loanTerm} days</div>
+                    <div className="font-medium text-right">
+                      {loanTerm} days
+                    </div>
 
-                    <div className="text-slate-400">Collateralization ratio:</div>
-                    <div className="font-medium text-right">{collateralizationRatio}%</div>
+                    <div className="text-slate-400">
+                      Collateralization ratio:
+                    </div>
+                    <div className="font-medium text-right">
+                      {collateralizationRatio}%
+                    </div>
 
                     <div className="text-slate-400">Interest rate:</div>
-                    <div className="font-medium text-right">{interestRate.toFixed(2)}% APR</div>
+                    <div className="font-medium text-right">
+                      {interestRate.toFixed(2)}% APR
+                    </div>
 
                     <div className="text-slate-400">Health factor:</div>
-                    <div className={`font-medium text-right ${getHealthColor()}`}>
+                    <div
+                      className={`font-medium text-right ${getHealthColor()}`}
+                    >
                       {healthFactor.toFixed(2)} ({getHealthLabel()})
                     </div>
 
@@ -444,7 +562,9 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
                     </div>
 
                     <div className="text-slate-400">Transaction fee:</div>
-                    <div className="font-medium text-right">{formatCurrency(borrowValue * 0.001)}</div>
+                    <div className="font-medium text-right">
+                      {formatCurrency(borrowValue * 0.001)}
+                    </div>
                   </div>
 
                   <Separator className="bg-slate-700" />
@@ -457,7 +577,10 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
 
                     <div className="text-slate-400">Due date:</div>
                     <div className="font-medium text-right">
-                      {new Date(Date.now() + Number.parseInt(loanTerm) * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                      {new Date(
+                        Date.now() +
+                          Number.parseInt(loanTerm) * 24 * 60 * 60 * 1000
+                      ).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -469,7 +592,11 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
         <div className="flex justify-end gap-3">
           {isConfirmStep ? (
             <>
-              <Button type="button" variant="outline" onClick={() => setIsConfirmStep(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsConfirmStep(false)}
+              >
                 Back
               </Button>
               <Button type="submit" className="web3-button">
@@ -484,7 +611,13 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
               <Button
                 type="submit"
                 className="web3-button"
-                disabled={!borrowAsset || !borrowAmount || !collateralAsset || !collateralAmount || healthFactor < 1}
+                disabled={
+                  !borrowAsset ||
+                  !borrowAmount ||
+                  !collateralAsset ||
+                  !collateralAmount ||
+                  healthFactor < 1
+                }
               >
                 Review Loan
               </Button>
@@ -493,5 +626,5 @@ export default function BorrowCryptoForm({ onSuccess }: BorrowCryptoFormProps) {
         </div>
       </form>
     </Form>
-  )
+  );
 }

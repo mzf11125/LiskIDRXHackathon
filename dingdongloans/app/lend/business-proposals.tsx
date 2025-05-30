@@ -198,6 +198,15 @@ export default function BusinessProposals() {
                       {proposal.total_pooled}
                     </p>
                   </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
+                      <Calendar className="h-3 w-3" />
+                      Duration
+                    </div>
+                    <p className="text-sm font-medium">
+                      {proposal.duration || "Not specified"}
+                    </p>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">

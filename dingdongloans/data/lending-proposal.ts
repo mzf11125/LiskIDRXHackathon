@@ -1,6 +1,6 @@
 import { BusinessProposal } from "@/types/business-proposal";
 import { api } from "@/hooks/use-axios";
-import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
+import { getOrAnalyzeWallet, getUserProfile } from "@/data/wallet-analysis-api";
 
 export const getLendingProposalById = async (
   id: string
@@ -51,6 +51,40 @@ export const getLendingProposalById = async (
     };
   } catch (error) {
     console.error("Error fetching lending proposal:", error);
+    throw error;
+  }
+};
+
+export const createBusinessProposal = async (
+  proposalData: Partial<BusinessProposal>
+): Promise<BusinessProposal> => {
+  try {
+    // Check if user has a complete profile first
+    const profile = await getUserProfile();
+    const requiredFields = [
+      "display_name",
+      "email",
+      "company_name",
+      "company_position",
+      "company_website",
+      "company_description",
+    ];
+    const missingFields = requiredFields.filter(
+      (field) => !profile[field as keyof typeof profile]
+    );
+
+    if (missingFields.length > 0) {
+      throw new Error(
+        `Please complete your profile first. Missing fields: ${missingFields.join(
+          ", "
+        )}`
+      );
+    }
+
+    const { data } = await api.post("/proposals/", proposalData);
+    return data;
+  } catch (error) {
+    console.error("Error creating business proposal:", error);
     throw error;
   }
 };

@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   PlusCircle,
   Search,
@@ -17,14 +18,24 @@ import {
   ChevronRight,
   BarChart3,
   FileText,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { useWallet } from "@/components/wallet-provider"
+  Edit,
+  Trash2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useWallet } from "@/components/wallet-provider";
+import WalletAnalytics from "@/components/wallet-analytics";
 import {
   Dialog,
   DialogContent,
@@ -32,54 +43,154 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { fetchBusinessProposals } from "@/data/business-proposals"
-import type { BusinessProposal } from "@/types/business-proposal"
-import CreateProposalForm from "./create-proposal-form"
-import { pools } from "@/data/mock-data"
-import BorrowCryptoForm from "./borrow-crypto-form"
+} from "@/components/ui/dialog";
+import {
+  fetchBusinessProposals,
+  getUserProposals,
+} from "@/data/business-proposals";
+import type { BusinessProposal } from "@/types/business-proposal";
+import CreateProposalForm from "./create-proposal-form";
+import { pools } from "@/data/mock-data";
+import BorrowCryptoForm from "./borrow-crypto-form";
+import { useProfile } from "@/components/ui/use-profile";
+import { checkProfileCompletion } from "@/data/business-proposals";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { User, AlertTriangle } from "lucide-react";
+import useAxios from "@/hooks/use-axios";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function BorrowPage() {
-  const { isConnected, connect, address } = useWallet()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false)
-  const [proposals, setProposals] = useState<BusinessProposal[]>([])
-  const [loading, setLoading] = useState(true)
+  const { isConnected, connect, address } = useWallet();
+  const { profile, fetchProfile, isProfileComplete } = useProfile();
+  const router = useRouter();
+  const { toast } = useToast();
+  const api = useAxios();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProposal, setEditingProposal] =
+    useState<BusinessProposal | null>(null);
+  const [proposals, setProposals] = useState<BusinessProposal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [profileStatus, setProfileStatus] = useState<{
+    complete: boolean;
+    missingFields: string[];
+  }>({
+    complete: false,
+    missingFields: [],
+  });
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false);
 
   useEffect(() => {
     const loadProposals = async () => {
-      try {
-        const data = await fetchBusinessProposals()
-        setProposals(data)
-      } catch (error) {
-        console.error("Error loading proposals:", error)
-      } finally {
-        setLoading(false)
+      if (!isConnected || !address) {
+        setLoading(false);
+        return;
       }
+
+      try {
+        // Use the new getUserProposals function
+        const userProposals = await getUserProposals();
+        setProposals(userProposals);
+      } catch (error) {
+        console.error("Error loading proposals:", error);
+        setProposals([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProposals();
+  }, [isConnected, address]);
+
+  // Check profile completion on mount
+  useEffect(() => {
+    if (isConnected && address) {
+      const checkProfile = async () => {
+        setIsCheckingProfile(true);
+        try {
+          await fetchProfile();
+          const status = await checkProfileCompletion();
+          setProfileStatus(status);
+        } catch (error) {
+          console.error("Error checking profile:", error);
+        } finally {
+          setIsCheckingProfile(false);
+        }
+      };
+
+      checkProfile();
+    } else {
+      setIsCheckingProfile(false);
     }
+  }, [isConnected, address, fetchProfile]);
 
-    loadProposals()
-  }, [])
-
-  // Filter proposals to only show those from the current user
-  // In a real app, this would come from an API call
-  const userProposals = proposals.filter(
-    (proposal) => isConnected && address && proposal.proposer_wallet === address,
-  )
+  // Remove the filtering since we're now getting user-specific proposals from API
+  const userProposals = proposals;
 
   // Filter proposals based on search term
   const filteredProposals = userProposals.filter(
     (proposal) =>
       proposal.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proposal.short_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proposal.accepted_token.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      proposal.short_description
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      proposal.accepted_token.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleEditProposal = (proposal: BusinessProposal) => {
+    setEditingProposal(proposal);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteProposal = async (proposalId: string) => {
+    if (!address) return;
+
+    try {
+      await api.delete(`/proposals/${proposalId}`);
+
+      // Refresh proposals list
+      const response = await api.get(`/proposals/by-wallet/${address}`);
+      setProposals(response.data.proposals || []);
+
+      toast({
+        title: "Proposal Deleted",
+        description: "Your proposal has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting proposal:", error);
+      toast({
+        title: "Delete Failed",
+        description: "There was an error deleting your proposal.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleProposalSuccess = async () => {
+    setIsCreateDialogOpen(false);
+    setIsEditDialogOpen(false);
+    setEditingProposal(null);
+
+    // Refresh proposals list
+    if (address) {
+      try {
+        const userProposals = await getUserProposals();
+        setProposals(userProposals);
+      } catch (error) {
+        console.error("Error refreshing proposals:", error);
+      }
+    }
+  };
 
   if (!isConnected) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-6 gradient-text">Connect Your Wallet</h1>
+        <h1 className="text-3xl font-bold mb-6 gradient-text">
+          Connect Your Wallet
+        </h1>
         <p className="text-slate-400 mb-8 max-w-md mx-auto">
           Please connect your wallet to access the borrowing features.
         </p>
@@ -87,7 +198,70 @@ export default function BorrowPage() {
           Connect Wallet
         </Button>
       </div>
-    )
+    );
+  }
+
+  // Show profile completion requirement
+  if (!isCheckingProfile && !profileStatus.complete) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-2xl mx-auto">
+          <Card className="web3-card">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <User className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-2xl gradient-text">
+                    Complete Your Profile
+                  </CardTitle>
+                  <p className="text-slate-400 mt-2">
+                    You need to complete your business profile before creating
+                    proposals.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Missing required fields:{" "}
+                  {profileStatus.missingFields.join(", ")}
+                </AlertDescription>
+              </Alert>
+
+              <div className="bg-slate-800/50 rounded-lg p-4">
+                <h3 className="font-semibold mb-3">Required Information:</h3>
+                <ul className="space-y-2 text-sm text-slate-400">
+                  <li>• Display Name</li>
+                  <li>• Email Address</li>
+                  <li>• Company Name</li>
+                  <li>• Your Position in Company</li>
+                  <li>• Company Website</li>
+                  <li>• Company Description</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => router.push("/profile")}
+                  className="web3-button flex-1"
+                >
+                  Complete Profile
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.reload()}
+                  className="flex-1"
+                >
+                  Refresh Status
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -98,7 +272,7 @@ export default function BorrowPage() {
           Fetching your business proposals...
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -106,7 +280,9 @@ export default function BorrowPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold gradient-text">Borrow</h1>
-          <p className="text-slate-400 mt-2">Borrow crypto assets or create business funding proposals</p>
+          <p className="text-slate-400 mt-2">
+            Borrow crypto assets or create business funding proposals
+          </p>
         </div>
         <div className="flex gap-3">
           <Card className="web3-card p-4 flex items-center gap-3">
@@ -128,9 +304,12 @@ export default function BorrowPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="web3-card col-span-1 lg:col-span-2">
               <CardHeader>
-                <CardTitle className="gradient-text">Borrow Crypto with Collateral</CardTitle>
+                <CardTitle className="gradient-text">
+                  Borrow Crypto with Collateral
+                </CardTitle>
                 <CardDescription>
-                  Borrow cryptocurrency by providing collateral assets. Monitor your positions and manage your risk.
+                  Borrow cryptocurrency by providing collateral assets. Monitor
+                  your positions and manage your risk.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -138,11 +317,14 @@ export default function BorrowPage() {
                   <Card className="bg-slate-800 border-slate-700">
                     <CardHeader className="pb-2">
                       <CardDescription className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" /> Available to Borrow
+                        <DollarSign className="h-4 w-4 mr-1" /> Available to
+                        Borrow
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-xl font-bold gradient-text">$25,000.00</div>
+                      <div className="text-xl font-bold gradient-text">
+                        $25,000.00
+                      </div>
                     </CardContent>
                   </Card>
                   <Card className="bg-slate-800 border-slate-700">
@@ -152,7 +334,9 @@ export default function BorrowPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-xl font-bold gradient-text">$10,000.00</div>
+                      <div className="text-xl font-bold gradient-text">
+                        $10,000.00
+                      </div>
                     </CardContent>
                   </Card>
                   <Card className="bg-slate-800 border-slate-700">
@@ -162,44 +346,77 @@ export default function BorrowPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-xl font-bold gradient-text">200%</div>
+                      <div className="text-xl font-bold gradient-text">
+                        200%
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-medium mb-3 gradient-text">Your Active Loans</h3>
+                  <h3 className="text-lg font-medium mb-3 gradient-text">
+                    Your Active Loans
+                  </h3>
                   {[1, 2].map((index) => (
-                    <Card key={index} className="bg-slate-800 border-slate-700 mb-4">
+                    <Card
+                      key={index}
+                      className="bg-slate-800 border-slate-700 mb-4"
+                    >
                       <CardContent className="p-4">
                         <div className="flex flex-col md:flex-row justify-between gap-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                              <Image src={`/placeholder.svg?height=40&width=40`} alt="BTC" width={40} height={40} />
+                              <Image
+                                src={`/placeholder.svg?height=40&width=40`}
+                                alt="BTC"
+                                width={40}
+                                height={40}
+                              />
                             </div>
                             <div>
-                              <div className="font-medium">{index === 1 ? "2.5 BTC" : "50 ETH"}</div>
+                              <div className="font-medium">
+                                {index === 1 ? "2.5 BTC" : "50 ETH"}
+                              </div>
                               <div className="text-sm text-slate-400">
-                                Borrowed on {index === 1 ? "May 10, 2025" : "April 25, 2025"}
+                                Borrowed on{" "}
+                                {index === 1
+                                  ? "May 10, 2025"
+                                  : "April 25, 2025"}
                               </div>
                             </div>
                           </div>
                           <div className="grid grid-cols-3 gap-4">
                             <div>
-                              <div className="text-xs text-slate-400">Collateral</div>
-                              <div className="font-medium">{index === 1 ? "100,000 IDRX" : "75 BTC"}</div>
+                              <div className="text-xs text-slate-400">
+                                Collateral
+                              </div>
+                              <div className="font-medium">
+                                {index === 1 ? "100,000 IDRX" : "75 BTC"}
+                              </div>
                             </div>
                             <div>
-                              <div className="text-xs text-slate-400">Interest Rate</div>
-                              <div className="font-medium">{index === 1 ? "3.5%" : "2.8%"} APR</div>
+                              <div className="text-xs text-slate-400">
+                                Interest Rate
+                              </div>
+                              <div className="font-medium">
+                                {index === 1 ? "3.5%" : "2.8%"} APR
+                              </div>
                             </div>
                             <div>
-                              <div className="text-xs text-slate-400">Health</div>
-                              <div className="font-medium text-green-500">Healthy</div>
+                              <div className="text-xs text-slate-400">
+                                Health
+                              </div>
+                              <div className="font-medium text-green-500">
+                                Healthy
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center">
-                            <Button variant="outline" size="sm" className="bg-slate-700 border-slate-600">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-slate-700 border-slate-600"
+                            >
                               Manage <ChevronRight className="ml-1 h-4 w-4" />
                             </Button>
                           </div>
@@ -210,7 +427,10 @@ export default function BorrowPage() {
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
-                  <Dialog open={isBorrowDialogOpen} onOpenChange={setIsBorrowDialogOpen}>
+                  <Dialog
+                    open={isBorrowDialogOpen}
+                    onOpenChange={setIsBorrowDialogOpen}
+                  >
                     <DialogTrigger asChild>
                       <Button className="web3-button">
                         <DollarSign className="mr-2 h-4 w-4" /> Borrow Crypto
@@ -221,20 +441,53 @@ export default function BorrowPage() {
                       style={{ position: "fixed" }}
                     >
                       <DialogHeader>
-                        <DialogTitle className="gradient-text text-xl">Borrow Cryptocurrency</DialogTitle>
+                        <DialogTitle className="gradient-text text-xl">
+                          Borrow Cryptocurrency
+                        </DialogTitle>
                         <DialogDescription>
-                          Borrow crypto assets by providing collateral. Monitor your health factor to avoid liquidation.
+                          Borrow crypto assets by providing collateral. Monitor
+                          your health factor to avoid liquidation.
                         </DialogDescription>
                       </DialogHeader>
-                      <BorrowCryptoForm onSuccess={() => setIsBorrowDialogOpen(false)} />
+                      <BorrowCryptoForm
+                        onSuccess={() => setIsBorrowDialogOpen(false)}
+                      />
                     </DialogContent>
                   </Dialog>
 
-                  <Button variant="outline" className="bg-slate-800 border-slate-700">
-                    <BarChart3 className="mr-2 h-4 w-4" /> View Analytics
-                  </Button>
+                  <Dialog
+                    open={isAnalyticsDialogOpen}
+                    onOpenChange={setIsAnalyticsDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="bg-slate-800 border-slate-700"
+                      >
+                        <BarChart3 className="mr-2 h-4 w-4" /> View Analytics
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent
+                      className="web3-card sm:max-w-[1000px] max-h-[90vh] overflow-y-auto"
+                      style={{ position: "fixed" }}
+                    >
+                      <DialogHeader>
+                        <DialogTitle className="gradient-text text-xl">
+                          Wallet & Credit Analytics
+                        </DialogTitle>
+                        <DialogDescription>
+                          Comprehensive analysis of your wallet activity and
+                          creditworthiness
+                        </DialogDescription>
+                      </DialogHeader>
+                      <WalletAnalytics />
+                    </DialogContent>
+                  </Dialog>
 
-                  <Button variant="outline" className="bg-slate-800 border-slate-700">
+                  <Button
+                    variant="outline"
+                    className="bg-slate-800 border-slate-700"
+                  >
                     <FileText className="mr-2 h-4 w-4" /> Loan History
                   </Button>
                 </div>
@@ -243,36 +496,58 @@ export default function BorrowPage() {
 
             <Card className="web3-card">
               <CardHeader>
-                <CardTitle className="gradient-text">Borrowing Markets</CardTitle>
-                <CardDescription>Available assets for borrowing with current rates and liquidity</CardDescription>
+                <CardTitle className="gradient-text">
+                  Borrowing Markets
+                </CardTitle>
+                <CardDescription>
+                  Available assets for borrowing with current rates and
+                  liquidity
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {pools[0].assets
-                  .filter(asset => asset.symbol === "IDRX") // Only show IDRX for borrowing
+                  .filter((asset) => asset.borrowEnabled) // Only show borrowable assets (IDRX)
                   .map((asset) => (
-                    <div key={asset.symbol} className="flex justify-between items-center p-3 bg-slate-800 rounded-lg">
+                    <div
+                      key={asset.symbol}
+                      className="flex justify-between items-center p-3 bg-slate-800 rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                          <Image src={`/placeholder.svg?height=32&width=32`} alt={asset.symbol} width={32} height={32} />
+                          <Image
+                            src={`/placeholder.svg?height=32&width=32`}
+                            alt={asset.symbol}
+                            width={32}
+                            height={32}
+                          />
                         </div>
                         <div>
                           <div className="font-medium">{asset.symbol}</div>
-                          <div className="text-xs text-slate-400">{asset.name}</div>
+                          <div className="text-xs text-slate-400">
+                            {asset.name}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-medium">{asset.apr}</div>
-                        <div className="text-xs text-slate-400">Variable APR</div>
+                        <div className="text-xs text-slate-400">
+                          Variable APR
+                        </div>
                       </div>
                     </div>
                   ))}
                 <div className="pt-2">
                   <div className="text-sm text-slate-400 p-2 bg-slate-800/50 rounded-lg">
-                    📢 Currently, only IDRX is available for borrowing. Other assets can be used as collateral.
+                    📢 Only IDRX is available for borrowing. Other assets (BTC,
+                    ETH, USDT, etc.) can be used as collateral to secure your
+                    loans.
                   </div>
                 </div>
                 <div className="pt-2">
-                  <Link href="/markets" className="text-sm text-blue-400 hover:text-blue-300 flex items-center">
+                  <Link
+                    href="/markets"
+                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
+                  >
                     View all markets <ChevronRight className="ml-1 h-4 w-4" />
                   </Link>
                 </div>
@@ -292,22 +567,26 @@ export default function BorrowPage() {
                 className="pl-10 bg-slate-800 border-slate-700 w-full"
               />
             </div>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <Dialog
+              open={isCreateDialogOpen}
+              onOpenChange={setIsCreateDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button className="web3-button">
                   <PlusCircle className="mr-2 h-4 w-4" /> Create Proposal
                 </Button>
               </DialogTrigger>
-              <DialogContent
-                className="web3-card sm:max-w-[800px] max-h-[90vh] overflow-hidden"
-              >
+              <DialogContent className="web3-card sm:max-w-[800px] max-h-[90vh]">
                 <DialogHeader>
-                  <DialogTitle className="gradient-text text-xl">Create Business Proposal</DialogTitle>
+                  <DialogTitle className="gradient-text text-xl">
+                    Create Business Proposal
+                  </DialogTitle>
                   <DialogDescription>
-                    Fill out the form below to create a new business proposal for funding.
+                    Fill out the form below to create a new business proposal
+                    for funding.
                   </DialogDescription>
                 </DialogHeader>
-                  <CreateProposalForm onSuccess={() => setIsCreateDialogOpen(false)} />
+                <CreateProposalForm onSuccess={handleProposalSuccess} />
               </DialogContent>
             </Dialog>
           </div>
@@ -320,7 +599,8 @@ export default function BorrowPage() {
             </TabsList>
 
             <TabsContent value="active" className="space-y-6">
-              {filteredProposals.filter((p) => p.status === "active").length > 0 ? (
+              {filteredProposals.filter((p) => p.status === "active").length >
+              0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProposals
                     .filter((p) => p.status === "active")
@@ -331,7 +611,10 @@ export default function BorrowPage() {
                       >
                         <CardHeader className="pb-2 relative">
                           <div className="absolute top-3 right-3">
-                            <Badge variant="outline" className="bg-blue-500/20 text-blue-500 border-blue-500/50">
+                            <Badge
+                              variant="outline"
+                              className="bg-blue-500/20 text-blue-500 border-blue-500/50"
+                            >
                               Active
                             </Badge>
                           </div>
@@ -345,40 +628,63 @@ export default function BorrowPage() {
                                   height={48}
                                 />
                               ) : (
-                                <div className="text-2xl font-bold">{proposal.company_name.charAt(0)}</div>
+                                <div className="text-2xl font-bold">
+                                  {proposal.company_name.charAt(0)}
+                                </div>
                               )}
                             </div>
                             <div>
-                              <CardTitle className="text-lg gradient-text">{proposal.company_name}</CardTitle>
+                              <CardTitle className="text-lg gradient-text">
+                                {proposal.company_name}
+                              </CardTitle>
                               <CardDescription className="flex items-center gap-1">
-                                <Wallet className="h-3 w-3" /> Requesting {proposal.accepted_token}
+                                <Wallet className="h-3 w-3" /> Requesting{" "}
+                                {proposal.accepted_token}
                               </CardDescription>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent className="pb-2">
-                          <p className="text-sm text-slate-300 mb-4">{proposal.short_description}</p>
+                          <p className="text-sm text-slate-300 mb-4">
+                            {proposal.short_description}
+                          </p>
                           <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <TrendingUp className="h-3 w-3" /> Return
                               </div>
-                              <p className="text-sm font-medium gradient-text">{proposal.expected_return}</p>
+                              <p className="text-sm font-medium gradient-text">
+                                {proposal.expected_return}
+                              </p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <Wallet className="h-3 w-3" /> Target
                               </div>
-                              <p className="text-sm font-medium">{proposal.target_funding}</p>
+                              <p className="text-sm font-medium">
+                                {proposal.target_funding}
+                              </p>
                             </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-400">Funding Progress</span>
+                              <span className="text-slate-400">
+                                Funding Progress
+                              </span>
                               <span>
                                 {(
-                                  (Number.parseFloat(proposal.current_funding.replace(/[^0-9.-]+/g, "")) /
-                                    Number.parseFloat(proposal.target_funding.replace(/[^0-9.-]+/g, ""))) *
+                                  (Number.parseFloat(
+                                    proposal.current_funding.replace(
+                                      /[^0-9.-]+/g,
+                                      ""
+                                    )
+                                  ) /
+                                    Number.parseFloat(
+                                      proposal.target_funding.replace(
+                                        /[^0-9.-]+/g,
+                                        ""
+                                      )
+                                    )) *
                                   100
                                 ).toFixed(1)}
                                 %
@@ -386,22 +692,53 @@ export default function BorrowPage() {
                             </div>
                             <Progress
                               value={
-                                (Number.parseFloat(proposal.current_funding.replace(/[^0-9.-]+/g, "")) /
-                                  Number.parseFloat(proposal.target_funding.replace(/[^0-9.-]+/g, ""))) *
+                                (Number.parseFloat(
+                                  proposal.current_funding.replace(
+                                    /[^0-9.-]+/g,
+                                    ""
+                                  )
+                                ) /
+                                  Number.parseFloat(
+                                    proposal.target_funding.replace(
+                                      /[^0-9.-]+/g,
+                                      ""
+                                    )
+                                  )) *
                                 100
                               }
                               className="h-1.5 bg-slate-800"
                             />
                             <div className="flex justify-between text-xs text-slate-400">
                               <span>
-                                {proposal.current_funding} / {proposal.target_funding}
+                                {proposal.current_funding} /{" "}
+                                {proposal.target_funding}
                               </span>
                               <span>{proposal.investor_count} investors</span>
                             </div>
                           </div>
                         </CardContent>
                         <CardFooter>
-                          <Link href={`/borrow/${proposal.id}`} className="w-full">
+                          <div className="flex items-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-slate-700 border-slate-600 mr-2"
+                              onClick={() => handleEditProposal(proposal)}
+                            >
+                              <Edit className="mr-1 h-4 w-4" /> Edit
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteProposal(proposal.id)}
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" /> Delete
+                            </Button>
+                          </div>
+                          <Link
+                            href={`/borrow/${proposal.id}`}
+                            className="w-full"
+                          >
                             <Button className="w-full web3-button group">
                               View Details{" "}
                               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -413,13 +750,18 @@ export default function BorrowPage() {
                 </div>
               ) : (
                 <Card className="web3-card p-8 text-center">
-                  <CardTitle className="mb-4 gradient-text">No Active Proposals</CardTitle>
+                  <CardTitle className="mb-4 gradient-text">
+                    No Active Proposals
+                  </CardTitle>
                   <CardDescription className="text-slate-400 mb-6">
                     {searchTerm
                       ? "No proposals match your search criteria. Try adjusting your search."
                       : "You don't have any active business proposals. Create a new proposal to get started."}
                   </CardDescription>
-                  <Button onClick={() => setIsCreateDialogOpen(true)} className="web3-button">
+                  <Button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="web3-button"
+                  >
                     <PlusCircle className="mr-2 h-4 w-4" /> Create Proposal
                   </Button>
                 </Card>
@@ -427,7 +769,8 @@ export default function BorrowPage() {
             </TabsContent>
 
             <TabsContent value="funded" className="space-y-6">
-              {filteredProposals.filter((p) => p.status === "funded").length > 0 ? (
+              {filteredProposals.filter((p) => p.status === "funded").length >
+              0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProposals
                     .filter((p) => p.status === "funded")
@@ -438,7 +781,10 @@ export default function BorrowPage() {
                       >
                         <CardHeader className="pb-2 relative">
                           <div className="absolute top-3 right-3">
-                            <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/50">
+                            <Badge
+                              variant="outline"
+                              className="bg-green-500/20 text-green-500 border-green-500/50"
+                            >
                               Funded
                             </Badge>
                           </div>
@@ -452,35 +798,49 @@ export default function BorrowPage() {
                                   height={48}
                                 />
                               ) : (
-                                <div className="text-2xl font-bold">{proposal.company_name.charAt(0)}</div>
+                                <div className="text-2xl font-bold">
+                                  {proposal.company_name.charAt(0)}
+                                </div>
                               )}
                             </div>
                             <div>
-                              <CardTitle className="text-lg gradient-text">{proposal.company_name}</CardTitle>
+                              <CardTitle className="text-lg gradient-text">
+                                {proposal.company_name}
+                              </CardTitle>
                               <CardDescription className="flex items-center gap-1">
-                                <Wallet className="h-3 w-3" /> Funded with {proposal.accepted_token}
+                                <Wallet className="h-3 w-3" /> Funded with{" "}
+                                {proposal.accepted_token}
                               </CardDescription>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent className="pb-2">
-                          <p className="text-sm text-slate-300 mb-4">{proposal.short_description}</p>
+                          <p className="text-sm text-slate-300 mb-4">
+                            {proposal.short_description}
+                          </p>
                           <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <TrendingUp className="h-3 w-3" /> Return
                               </div>
-                              <p className="text-sm font-medium gradient-text">{proposal.expected_return}</p>
+                              <p className="text-sm font-medium gradient-text">
+                                {proposal.expected_return}
+                              </p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <Wallet className="h-3 w-3" /> Raised
                               </div>
-                              <p className="text-sm font-medium">{proposal.target_funding}</p>
+                              <p className="text-sm font-medium">
+                                {proposal.target_funding}
+                              </p>
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Progress value={100} className="h-1.5 bg-slate-800" />
+                            <Progress
+                              value={100}
+                              className="h-1.5 bg-slate-800"
+                            />
                             <div className="flex justify-between text-xs text-slate-400">
                               <span>Fully Funded</span>
                               <span>{proposal.investor_count} investors</span>
@@ -488,7 +848,10 @@ export default function BorrowPage() {
                           </div>
                         </CardContent>
                         <CardFooter>
-                          <Link href={`/borrow/${proposal.id}`} className="w-full">
+                          <Link
+                            href={`/borrow/${proposal.id}`}
+                            className="w-full"
+                          >
                             <Button className="w-full web3-button group">
                               View Details{" "}
                               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -500,11 +863,16 @@ export default function BorrowPage() {
                 </div>
               ) : (
                 <Card className="web3-card p-8 text-center">
-                  <CardTitle className="mb-4 gradient-text">No Funded Proposals</CardTitle>
+                  <CardTitle className="mb-4 gradient-text">
+                    No Funded Proposals
+                  </CardTitle>
                   <CardDescription className="text-slate-400 mb-6">
                     You don't have any funded business proposals yet.
                   </CardDescription>
-                  <Button onClick={() => setIsCreateDialogOpen(true)} className="web3-button">
+                  <Button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="web3-button"
+                  >
                     <PlusCircle className="mr-2 h-4 w-4" /> Create Proposal
                   </Button>
                 </Card>
@@ -512,10 +880,14 @@ export default function BorrowPage() {
             </TabsContent>
 
             <TabsContent value="expired" className="space-y-6">
-              {filteredProposals.filter((p) => p.status === "expired" || p.status === "cancelled").length > 0 ? (
+              {filteredProposals.filter(
+                (p) => p.status === "expired" || p.status === "cancelled"
+              ).length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProposals
-                    .filter((p) => p.status === "expired" || p.status === "cancelled")
+                    .filter(
+                      (p) => p.status === "expired" || p.status === "cancelled"
+                    )
                     .map((proposal) => (
                       <Card
                         key={proposal.id}
@@ -523,8 +895,12 @@ export default function BorrowPage() {
                       >
                         <CardHeader className="pb-2 relative">
                           <div className="absolute top-3 right-3">
-                            <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/50">
-                              {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+                            <Badge
+                              variant="outline"
+                              className="bg-red-500/20 text-red-500 border-red-500/50"
+                            >
+                              {proposal.status.charAt(0).toUpperCase() +
+                                proposal.status.slice(1)}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-3">
@@ -537,52 +913,77 @@ export default function BorrowPage() {
                                   height={48}
                                 />
                               ) : (
-                                <div className="text-2xl font-bold">{proposal.company_name.charAt(0)}</div>
+                                <div className="text-2xl font-bold">
+                                  {proposal.company_name.charAt(0)}
+                                </div>
                               )}
                             </div>
                             <div>
-                              <CardTitle className="text-lg gradient-text">{proposal.company_name}</CardTitle>
+                              <CardTitle className="text-lg gradient-text">
+                                {proposal.company_name}
+                              </CardTitle>
                               <CardDescription className="flex items-center gap-1">
-                                <Wallet className="h-3 w-3" /> Requested {proposal.accepted_token}
+                                <Wallet className="h-3 w-3" /> Requested{" "}
+                                {proposal.accepted_token}
                               </CardDescription>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent className="pb-2">
-                          <p className="text-sm text-slate-300 mb-4">{proposal.short_description}</p>
+                          <p className="text-sm text-slate-300 mb-4">
+                            {proposal.short_description}
+                          </p>
                           <div className="grid grid-cols-2 gap-2 mb-4">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <TrendingUp className="h-3 w-3" /> Return
                               </div>
-                              <p className="text-sm font-medium gradient-text">{proposal.expected_return}</p>
+                              <p className="text-sm font-medium gradient-text">
+                                {proposal.expected_return}
+                              </p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 text-xs text-slate-400 mb-1">
                                 <Wallet className="h-3 w-3" /> Target
                               </div>
-                              <p className="text-sm font-medium">{proposal.target_funding}</p>
+                              <p className="text-sm font-medium">
+                                {proposal.target_funding}
+                              </p>
                             </div>
                           </div>
                           <div className="space-y-2">
                             <Progress
                               value={
-                                (Number.parseFloat(proposal.current_funding.replace(/[^0-9.-]+/g, "")) /
-                                  Number.parseFloat(proposal.target_funding.replace(/[^0-9.-]+/g, ""))) *
+                                (Number.parseFloat(
+                                  proposal.current_funding.replace(
+                                    /[^0-9.-]+/g,
+                                    ""
+                                  )
+                                ) /
+                                  Number.parseFloat(
+                                    proposal.target_funding.replace(
+                                      /[^0-9.-]+/g,
+                                      ""
+                                    )
+                                  )) *
                                 100
                               }
                               className="h-1.5 bg-slate-800"
                             />
                             <div className="flex justify-between text-xs text-slate-400">
                               <span>
-                                {proposal.current_funding} / {proposal.target_funding}
+                                {proposal.current_funding} /{" "}
+                                {proposal.target_funding}
                               </span>
                               <span>{proposal.investor_count} investors</span>
                             </div>
                           </div>
                         </CardContent>
                         <CardFooter>
-                          <Link href={`/borrow/${proposal.id}`} className="w-full">
+                          <Link
+                            href={`/borrow/${proposal.id}`}
+                            className="w-full"
+                          >
                             <Button className="w-full web3-button group">
                               View Details{" "}
                               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -594,11 +995,16 @@ export default function BorrowPage() {
                 </div>
               ) : (
                 <Card className="web3-card p-8 text-center">
-                  <CardTitle className="mb-4 gradient-text">No Expired or Cancelled Proposals</CardTitle>
+                  <CardTitle className="mb-4 gradient-text">
+                    No Expired or Cancelled Proposals
+                  </CardTitle>
                   <CardDescription className="text-slate-400 mb-6">
                     You don't have any expired or cancelled business proposals.
                   </CardDescription>
-                  <Button onClick={() => setIsCreateDialogOpen(true)} className="web3-button">
+                  <Button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="web3-button"
+                  >
                     <PlusCircle className="mr-2 h-4 w-4" /> Create Proposal
                   </Button>
                 </Card>
@@ -607,6 +1013,28 @@ export default function BorrowPage() {
           </Tabs>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Proposal Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="web3-card sm:max-w-[800px] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="gradient-text text-xl">
+              Edit Business Proposal
+            </DialogTitle>
+            <DialogDescription>
+              Update your business proposal details.
+            </DialogDescription>
+          </DialogHeader>
+          {editingProposal && (
+            <CreateProposalForm
+              onSuccess={handleProposalSuccess}
+              initialData={editingProposal}
+              isEditing={true}
+              proposalId={editingProposal.id}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }

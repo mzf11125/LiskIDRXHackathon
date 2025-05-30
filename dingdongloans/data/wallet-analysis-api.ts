@@ -1,11 +1,17 @@
 import { api } from "@/hooks/use-axios";
-import type { APIWalletAnalysis } from "@/types/wallet-analysis";
+import type {
+  APIWalletAnalysis,
+  UserProfile,
+  ProfileUpdateRequest,
+} from "@/types/wallet-analysis";
 
 export const analyzeWallet = async (
   walletAddress: string
 ): Promise<APIWalletAnalysis> => {
   try {
-    const { data } = await api.post(`/wallets/analyze/${walletAddress}`);
+    const { data } = await api.post("/wallets/analyze", {
+      wallet_address: walletAddress,
+    });
     return data;
   } catch (error) {
     console.error("Error analyzing wallet:", error);
@@ -37,3 +43,26 @@ export const getOrAnalyzeWallet = async (
     return await analyzeWallet(walletAddress);
   }
 };
+
+// Profile API functions
+export const getUserProfile = async (): Promise<UserProfile> => {
+  const { data } = await api.get("/profiles/me");
+  return data;
+};
+
+export const getProfileByWallet = async (
+  walletAddress: string
+): Promise<UserProfile> => {
+  const { data } = await api.get(`/profiles/${walletAddress}`);
+  return data;
+};
+
+export const createOrUpdateUserProfile = async (
+  profileData: ProfileUpdateRequest
+): Promise<UserProfile> => {
+  const { data } = await api.put("/profiles/me", profileData);
+  return data;
+};
+
+// Keep backward compatibility
+export const updateUserProfile = createOrUpdateUserProfile;

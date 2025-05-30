@@ -51,6 +51,8 @@ import {
 import { AIWalletAnalysisComponent } from "@/components/ai-wallet-analysis";
 import { getAIWalletAnalysis } from "@/data/ai-wallet-analysis";
 import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
+import useAxios from "@/lib/axios";
+import CreateProposalForm from "@/components/create-proposal-form";
 
 interface BusinessProposalClientPageProps {
   params: { id: string };
@@ -66,6 +68,11 @@ export default function BusinessProposalClientPage({
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [documents, setDocuments] = useState(proposal?.documents || []);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const api = useAxios();
 
   // Get AI wallet analysis
   const walletAnalysis = proposal
@@ -111,14 +118,92 @@ export default function BusinessProposalClientPage({
     }
   };
 
-  const handleDelete = () => {
-    toast({
-      title: "Proposal Deleted",
-      description: `Your business proposal has been deleted.`,
+  const handleDeleteProposal = async () => {
+    if (!walletAddress || isDeleting) return;
+
+    setIsDeleting(true);
+    try {
+      await api.delete(`/proposals/${walletAddress}`);
+
+      toast({
+        title: "Proposal Deleted",
+        description: "Your business proposal has been deleted successfully.",
+      });
+
+      setIsDeleteDialogOpen(false);
+      router.push("/borrow");
+    } catch (error) {
+      console.error("Error deleting proposal:", error);
+      toast({
+        title: "Delete Failed",
+        description: "There was an error deleting your proposal.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    try {
+      await api.delete(`/proposals/${proposal.id}/documents/${documentId}`);
+
+      // Update local documents state
+      setDocuments(documents.filter((doc) => doc.id !== documentId));
+
+      toast({
+        title: "Document Deleted",
+        description: "Document has been removed from your proposal.",
+      });
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast({
+        title: "Delete Failed",
+        description: "There was an error deleting the document.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddDocument = async (files: FileList) => {
+    const uploadPromises = Array.from(files).map(async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", file.name);
+      formData.append("type", file.type.split("/")[1] || "document");
+
+      try {
+        const response = await api.post(
+          `/proposals/${proposal.id}/documents`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        return response.data;
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+        throw error;
+      }
     });
 
-    setIsDeleteDialogOpen(false);
-    router.push("/borrow");
+    try {
+      const newDocuments = await Promise.all(uploadPromises);
+      setDocuments([...documents, ...newDocuments]);
+
+      toast({
+        title: "Documents Uploaded",
+        description: `${newDocuments.length} document(s) added successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Some documents failed to upload.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!proposal) {
@@ -246,7 +331,7 @@ export default function BusinessProposalClientPage({
           <CardContent>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-bold gradient-text">
-                {proposal.duration}
+                {proposal.duration || "Not specified"}
               </p>
             </div>
           </CardContent>
@@ -434,7 +519,7 @@ export default function BusinessProposalClientPage({
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => router.push(`/borrow/${proposal.id}/edit`)}
+                  onClick={() => setIsEditDialogOpen(true)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Proposal
@@ -442,9 +527,10 @@ export default function BusinessProposalClientPage({
                 <Button
                   variant="destructive"
                   onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={isDeleting}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </Button>
               </div>
             )}
@@ -497,7 +583,7 @@ export default function BusinessProposalClientPage({
                           Duration
                         </div>
                         <p className="text-sm font-medium">
-                          {proposal.duration}
+                          {proposal.duration || "Not specified"}
                         </p>
                       </div>
                       <div>
@@ -715,28 +801,48 @@ export default function BusinessProposalClientPage({
           <TabsContent value="documents">
             <Card>
               <CardHeader>
-                <CardTitle>Project Documents</CardTitle>
-                <CardDescription>
-                  Important documents and files related to this business
-                  proposal
-                </CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Project Documents</CardTitle>
+                    <CardDescription>
+                      Important documents and files related to this business
+                      proposal
+                    </CardDescription>
+                  </div>
+                  {proposal.proposer_wallet === walletAddress && (
+                    <div>
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        id="add-documents"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            handleAddDocument(e.target.files);
+                          }
+                        }}
+                      />
+                      <Button asChild variant="outline">
+                        <label
+                          htmlFor="add-documents"
+                          className="cursor-pointer"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Documents
+                        </label>
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {proposal.documents.map((doc) => (
+                  {documents.map((doc) => (
                     <Card key={doc.id}>
                       <CardContent className="pt-6">
                         <div className="flex items-start gap-4">
                           <div className="p-2 rounded-lg bg-slate-800">
-                            {doc.type === "pdf" ? (
-                              <FileText className="h-6 w-6 text-red-400" />
-                            ) : doc.type === "image" ? (
-                              <ImageIcon className="h-6 w-6 text-blue-400" />
-                            ) : doc.type === "spreadsheet" ? (
-                              <Table className="h-6 w-6 text-green-400" />
-                            ) : (
-                              <Presentation className="h-6 w-6 text-orange-400" />
-                            )}
+                            {getDocumentIcon(doc.type)}
                           </div>
                           <div className="flex-1">
                             <h3 className="font-medium mb-1">{doc.title}</h3>
@@ -744,17 +850,29 @@ export default function BusinessProposalClientPage({
                               <span className="text-slate-400">
                                 {formatDate(doc.uploaded_at)} • {doc.size}
                               </span>
-                              <Button variant="ghost" size="sm" asChild>
-                                <a
-                                  href={doc.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2"
-                                >
-                                  <Download className="h-4 w-4" />
-                                  Download
-                                </a>
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" asChild>
+                                  <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                    Download
+                                  </a>
+                                </Button>
+                                {proposal.proposer_wallet === walletAddress && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteDocument(doc.id)}
+                                    className="text-red-400 hover:text-red-300"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -859,6 +977,30 @@ export default function BusinessProposalClientPage({
           </TabsContent>
         </Tabs>
 
+        {/* Edit Proposal Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="web3-card sm:max-w-[800px] max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="gradient-text text-xl">
+                Edit Proposal
+              </DialogTitle>
+              <DialogDescription>
+                Update your business proposal details.
+              </DialogDescription>
+            </DialogHeader>
+            <CreateProposalForm
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                // Refresh page or update proposal data
+                window.location.reload();
+              }}
+              initialData={proposal}
+              isEditing={true}
+              proposalId={proposal.id}
+            />
+          </DialogContent>
+        </Dialog>
+
         {/* Delete Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
@@ -866,20 +1008,26 @@ export default function BusinessProposalClientPage({
               <DialogTitle>Delete Proposal</DialogTitle>
               <DialogDescription>
                 Are you sure you want to delete this business proposal? This
-                action cannot be undone.
+                action cannot be undone and will remove all associated
+                documents.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
+            <div className="flex justify-end gap-3 mt-6">
               <Button
                 variant="ghost"
                 onClick={() => setIsDeleteDialogOpen(false)}
+                disabled={isDeleting}
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteProposal}>
-                Delete
+              <Button
+                variant="destructive"
+                onClick={handleDeleteProposal}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete Proposal"}
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

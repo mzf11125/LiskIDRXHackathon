@@ -1,29 +1,50 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { ArrowRight, TrendingUp, Wallet, BarChart3, Shield, ArrowUpRight, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useWallet } from "@/components/wallet-provider"
-import { cn } from "@/lib/utils"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import DepositAssetForm from "@/components/deposit-asset-form"
-import { getUserDeposits } from "@/data/mock-data"
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  TrendingUp,
+  Wallet,
+  BarChart3,
+  Shield,
+  ArrowUpRight,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useWallet } from "@/components/wallet-provider";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import DepositAssetForm from "@/components/deposit-asset-form";
+import { getUserDeposits } from "@/data/mock-data";
 
 export default function Home() {
-  const { isConnected, connect } = useWallet()
-  const [activeTab, setActiveTab] = useState("overview")
-  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false)
-  const [selectedAssetForDeposit, setSelectedAssetForDeposit] = useState<string>("")
-  const heroRef = useRef<HTMLDivElement>(null)
+  const { isConnected, connect } = useWallet();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [selectedAssetForDeposit, setSelectedAssetForDeposit] =
+    useState<string>("");
+  const heroRef = useRef<HTMLDivElement>(null);
 
   // Get user deposits
-  const userDeposits = getUserDeposits()
+  const userDeposits = getUserDeposits();
   const totalDepositValue = userDeposits.reduce((sum, deposit) => {
-    return sum + parseFloat(deposit.value.replace('$', '').replace(',', ''))
-  }, 0)
+    return sum + parseFloat(deposit.value.replace("$", "").replace(",", ""));
+  }, 0);
 
   // Animated number counter effect
   const AnimatedCounter = ({
@@ -32,21 +53,27 @@ export default function Home() {
     prefix = "",
     suffix = "",
     formatOptions,
-  }: { end: number; label: string; prefix?: string; suffix?: string; formatOptions?: Intl.NumberFormatOptions }) => {
-    const [count, setCount] = useState(0)
+  }: {
+    end: number;
+    label: string;
+    prefix?: string;
+    suffix?: string;
+    formatOptions?: Intl.NumberFormatOptions;
+  }) => {
+    const [count, setCount] = useState(0);
 
     useEffect(() => {
-      let startTimestamp: number
+      let startTimestamp: number;
       const step = (timestamp: number) => {
-        if (!startTimestamp) startTimestamp = timestamp
-        const progress = Math.min((timestamp - startTimestamp) / 2000, 1)
-        setCount(Math.floor(progress * end))
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / 2000, 1);
+        setCount(Math.floor(progress * end));
         if (progress < 1) {
-          window.requestAnimationFrame(step)
+          window.requestAnimationFrame(step);
         }
-      }
-      window.requestAnimationFrame(step)
-    }, [end])
+      };
+      window.requestAnimationFrame(step);
+    }, [end]);
 
     return (
       <div className="text-center">
@@ -57,54 +84,61 @@ export default function Home() {
         </p>
         <p className="text-sm text-slate-400">{label}</p>
       </div>
-    )
-  }
+    );
+  };
 
   // Mouse move effect for hero section
   useEffect(() => {
-    const hero = heroRef.current
-    if (!hero) return
+    const hero = heroRef.current;
+    if (!hero) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const { left, top, width, height } = hero.getBoundingClientRect()
-      const x = (e.clientX - left) / width - 0.5
-      const y = (e.clientY - top) / height - 0.5
+      const { left, top, width, height } = hero.getBoundingClientRect();
+      const x = (e.clientX - left) / width - 0.5;
+      const y = (e.clientY - top) / height - 0.5;
 
-      hero.style.setProperty("--mouse-x", `${x * 20}px`)
-      hero.style.setProperty("--mouse-y", `${y * 20}px`)
-    }
+      hero.style.setProperty("--mouse-x", `${x * 20}px`);
+      hero.style.setProperty("--mouse-y", `${y * 20}px`);
+    };
 
-    hero.addEventListener("mousemove", handleMouseMove)
+    hero.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      hero.removeEventListener("mousemove", handleMouseMove)
-    }
-  }, [])
+      hero.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   const handleDepositAsset = (assetSymbol: string) => {
-    setSelectedAssetForDeposit(assetSymbol)
-    setIsDepositDialogOpen(true)
-  }
+    setSelectedAssetForDeposit(assetSymbol);
+    setIsDepositDialogOpen(true);
+  };
 
   const handleDepositSuccess = () => {
-    setIsDepositDialogOpen(false)
-    setSelectedAssetForDeposit("")
+    setIsDepositDialogOpen(false);
+    setSelectedAssetForDeposit("");
     // In a real app, you might want to refresh data here
-  }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section ref={heroRef} className="relative py-20 overflow-hidden" style={{ transform: "translate3d(0, 0, 0)" }}>
+      <section
+        ref={heroRef}
+        className="relative py-20 overflow-hidden"
+        style={{ transform: "translate3d(0, 0, 0)" }}
+      >
         <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                  <span className="gradient-text">Decentralized</span> Lending on Lisk
+                  <span className="gradient-text">Decentralized</span> Lending
+                  on Lisk
                 </h1>
                 <p className="mt-6 text-xl text-slate-300">
-                  Borrow and lend digital assets with the most secure and transparent platform on the Lisk blockchain powered with AI analyzer.
+                  Borrow and lend digital assets with the most secure and
+                  transparent platform on the Lisk blockchain powered with AI
+                  analyzer.
                 </p>
               </div>
               <div className="flex flex-wrap gap-4">
@@ -117,7 +151,10 @@ export default function Home() {
                       </Button>
                     </Link>
                     <Link href="/borrow">
-                      <Button variant="outline" className="text-lg px-8 py-6 border-slate-700 hover:bg-slate-800 group">
+                      <Button
+                        variant="outline"
+                        className="text-lg px-8 py-6 border-slate-700 hover:bg-slate-800 group"
+                      >
                         Deposit Assets{" "}
                         <ArrowUpRight className="ml-2 h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                       </Button>
@@ -126,12 +163,13 @@ export default function Home() {
                 ) : (
                   <Button
                     onClick={() => {
-                      console.log("Connect wallet button clicked")
-                      connect()
+                      console.log("Connect wallet button clicked");
+                      connect();
                     }}
                     className="web3-button text-lg px-8 py-6 group"
                   >
-                    Connect Wallet <Wallet className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                    Connect Wallet{" "}
+                    <Wallet className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                   </Button>
                 )}
               </div>
@@ -141,7 +179,10 @@ export default function Home() {
                   label="Total Value Locked"
                   prefix="$"
                   suffix="B+"
-                  formatOptions={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+                  formatOptions={{
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  }}
                 />
                 <AnimatedCounter end={12} label="Avg. APR" suffix="%" />
                 <AnimatedCounter end={50000} label="Transactions" suffix="+" />
@@ -163,11 +204,17 @@ export default function Home() {
                         <div>
                           <p className="font-medium">{token}</p>
                           <p className="text-xs text-slate-400">
-                            Deposit APR: {5 + i * 2}% | Borrow APR: {3 + i * 1.5}%
+                            Deposit APR: {5 + i * 2}% | Borrow APR:{" "}
+                            {3 + i * 1.5}%
                           </p>
                         </div>
                       </div>
-                      <TrendingUp className={cn("h-5 w-5", i % 2 === 0 ? "text-green-500" : "text-red-500")} />
+                      <TrendingUp
+                        className={cn(
+                          "h-5 w-5",
+                          i % 2 === 0 ? "text-green-500" : "text-red-500"
+                        )}
+                      />
                     </div>
                   ))}
                 </div>
@@ -195,7 +242,8 @@ export default function Home() {
               Why Choose <span className="gradient-text">Dingdong.loans</span>
             </h2>
             <p className="mt-4 text-xl text-slate-400 max-w-3xl mx-auto">
-              Our platform offers the most secure, transparent, and efficient way to lend and borrow digital assets.
+              Our platform offers the most secure, transparent, and efficient
+              way to lend and borrow digital assets.
             </p>
           </div>
 
@@ -203,30 +251,42 @@ export default function Home() {
             {[
               {
                 title: "AI-Powered Analyzer",
-                description: "Leverage our AI-driven insights for smarter lending and borrowing decisions.",
+                description:
+                  "Leverage our AI-driven insights for smarter lending and borrowing decisions.",
                 icon: <TrendingUp className="h-10 w-10 text-primary" />, // Or a more AI-specific icon if you have one
                 delay: "floating-delay-0",
               },
               {
                 title: "Secure Protocol",
-                description: "Built on Lisk blockchain with multiple security audits and insurance",
+                description:
+                  "Built on Lisk blockchain with multiple security audits and insurance",
                 icon: <Shield className="h-10 w-10 text-primary" />,
                 delay: "floating-delay-1",
               },
               {
                 title: "Transparent",
-                description: "All transactions and rates are visible on-chain for complete transparency",
+                description:
+                  "All transactions and rates are visible on-chain for complete transparency",
                 icon: <BarChart3 className="h-10 w-10 text-primary" />,
                 delay: "floating-delay-2",
               },
             ].map((feature, i) => (
-              <Card key={i} className={`web3-card web3-gradient ${feature.delay}`}>
+              <Card
+                key={i}
+                className={`web3-card web3-gradient ${feature.delay}`}
+              >
                 <CardHeader>
-                  <div className="p-2 rounded-lg bg-primary/10 w-fit mb-4 pulse">{feature.icon}</div>
-                  <CardTitle className="gradient-text">{feature.title}</CardTitle>
+                  <div className="p-2 rounded-lg bg-primary/10 w-fit mb-4 pulse">
+                    {feature.icon}
+                  </div>
+                  <CardTitle className="gradient-text">
+                    {feature.title}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-slate-400 text-base">{feature.description}</CardDescription>
+                  <CardDescription className="text-slate-400 text-base">
+                    {feature.description}
+                  </CardDescription>
                 </CardContent>
               </Card>
             ))}
@@ -238,9 +298,15 @@ export default function Home() {
       {isConnected && (
         <section className="py-16 relative overflow-hidden glass-effect">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-8 gradient-text">Your Dashboard</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 gradient-text">
+              Your Dashboard
+            </h2>
 
-            <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
+            <Tabs
+              defaultValue="overview"
+              value={activeTab}
+              onValueChange={setActiveTab}
+            >
               <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 mb-8 bg-slate-800/50">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="supply">Supply</TabsTrigger>
@@ -251,11 +317,17 @@ export default function Home() {
                 <div className="grid md:grid-cols-3 gap-6">
                   <Card className="web3-card floating">
                     <CardHeader>
-                      <CardTitle className="text-lg">Total Deposit Value</CardTitle>
+                      <CardTitle className="text-lg">
+                        Total Deposit Value
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold gradient-text">${totalDepositValue.toFixed(2)}</p>
-                      <p className="text-sm text-slate-400 mt-1">Across {userDeposits.length} assets</p>
+                      <p className="text-3xl font-bold gradient-text">
+                        ${totalDepositValue.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Across {userDeposits.length} assets
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -265,7 +337,9 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-3xl font-bold gradient-text">$0.00</p>
-                      <p className="text-sm text-slate-400 mt-1">Across 0 assets</p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Across 0 assets
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -277,7 +351,9 @@ export default function Home() {
                       <p className="text-3xl font-bold gradient-text">
                         {userDeposits.length > 0 ? "7.2%" : "0.00%"}
                       </p>
-                      <p className="text-sm text-slate-400 mt-1">Based on your positions</p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Based on your positions
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -290,29 +366,45 @@ export default function Home() {
                     {userDeposits.length > 0 ? (
                       <div className="space-y-4">
                         {userDeposits.map((deposit) => (
-                          <div key={deposit.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg">
+                          <div
+                            key={deposit.id}
+                            className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg"
+                          >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
                                 {deposit.asset.charAt(0)}
                               </div>
                               <div>
                                 <p className="font-medium">{deposit.asset}</p>
-                                <p className="text-sm text-slate-400">Deposited: {deposit.amount}</p>
+                                <p className="text-sm text-slate-400">
+                                  Deposited: {deposit.amount}
+                                </p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-medium gradient-text">{deposit.value}</p>
-                              <p className="text-sm text-green-500">+{deposit.earnedInterest} earned</p>
+                              <p className="font-medium gradient-text">
+                                {deposit.value}
+                              </p>
+                              <p className="text-sm text-green-500">
+                                +{deposit.earnedInterest} earned
+                              </p>
                             </div>
                           </div>
                         ))}
                         <div className="pt-4 flex justify-center gap-4">
-                          <Button onClick={() => setIsDepositDialogOpen(true)} className="web3-button group">
+                          <Button
+                            onClick={() => setIsDepositDialogOpen(true)}
+                            className="web3-button group"
+                          >
                             <Plus className="mr-2 h-4 w-4" />
                             Deposit More{" "}
                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                           </Button>
-                          <Button onClick={() => setActiveTab("borrow")} variant="outline" className="group">
+                          <Button
+                            onClick={() => setActiveTab("borrow")}
+                            variant="outline"
+                            className="group"
+                          >
                             Borrow Assets{" "}
                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                           </Button>
@@ -320,13 +412,23 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-slate-400">You don't have any active positions yet.</p>
+                        <p className="text-slate-400">
+                          You don't have any active positions yet.
+                        </p>
                         <div className="mt-4 flex justify-center gap-4">
-                          <Button onClick={() => setActiveTab("supply")} variant="outline" className="group">
+                          <Button
+                            onClick={() => setActiveTab("supply")}
+                            variant="outline"
+                            className="group"
+                          >
                             Supply Assets{" "}
                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                           </Button>
-                          <Button onClick={() => setActiveTab("borrow")} variant="outline" className="group">
+                          <Button
+                            onClick={() => setActiveTab("borrow")}
+                            variant="outline"
+                            className="group"
+                          >
                             Borrow Assets{" "}
                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                           </Button>
@@ -341,11 +443,13 @@ export default function Home() {
                 <Card className="web3-card">
                   <CardHeader>
                     <CardTitle>Assets to Deposit</CardTitle>
-                    <CardDescription>Supply assets to earn interest and use as collateral</CardDescription>
+                    <CardDescription>
+                      Supply assets to earn interest and use as collateral
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {["USDT", "BTC", "ETH"].map((token, i) => (
+                      {["IDRX", "BTC", "ETH", "USDT"].map((token, i) => (
                         <div
                           key={token}
                           className="flex justify-between items-center p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-all duration-300 transform hover:-translate-y-1"
@@ -357,12 +461,17 @@ export default function Home() {
                             <div>
                               <p className="font-medium">{token}</p>
                               <p className="text-xs text-slate-400">
-                                Wallet: 0.00 {token === "IDRX" ? "(Earn interest + Borrowable)" : "(Earn interest + Collateral)"}
+                                Wallet: 0.00{" "}
+                                {token === "IDRX"
+                                  ? "(Borrowable + Earn interest + Collateral)"
+                                  : "(Collateral + Earn interest)"}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium gradient-text">{5 + i * 2}% APY</p>
+                            <p className="font-medium gradient-text">
+                              {5 + i * 2}% APY
+                            </p>
                             <Button
                               size="sm"
                               className="mt-1 h-8 web3-button"
@@ -382,7 +491,9 @@ export default function Home() {
                 <Card className="web3-card">
                   <CardHeader>
                     <CardTitle>Assets to Borrow</CardTitle>
-                    <CardDescription>Currently only IDRX is available for borrowing</CardDescription>
+                    <CardDescription>
+                      Currently only IDRX is available for borrowing
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="text-center py-8">
@@ -392,11 +503,17 @@ export default function Home() {
                         </div>
                       </div>
                       <h3 className="text-lg font-medium mb-2">IDRX Token</h3>
-                      <p className="text-slate-400 mb-4">The primary borrowable asset on our platform</p>
-                      <p className="text-sm text-slate-400 mb-4">
-                        You need to supply assets as collateral before borrowing IDRX.
+                      <p className="text-slate-400 mb-4">
+                        The only borrowable asset on our platform
                       </p>
-                      <Button onClick={() => setActiveTab("supply")} className="web3-button group">
+                      <p className="text-sm text-slate-400 mb-4">
+                        You need to supply other assets as collateral before
+                        borrowing IDRX.
+                      </p>
+                      <Button
+                        onClick={() => setActiveTab("supply")}
+                        className="web3-button group"
+                      >
                         Supply Collateral{" "}
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -420,7 +537,8 @@ export default function Home() {
               Deposit Assets
             </DialogTitle>
             <DialogDescription>
-              Deposit assets to earn interest and use them as collateral for borrowing.
+              Deposit assets to earn interest and use them as collateral for
+              borrowing.
             </DialogDescription>
           </DialogHeader>
           <DepositAssetForm
@@ -430,5 +548,5 @@ export default function Home() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

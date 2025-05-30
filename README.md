@@ -47,10 +47,11 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 
 ### For Business Funding
 
-1. **Create Proposal**: Submit detailed business plans, financials, and funding goals
-2. **AI Risk Assessment**: Get automated wallet analysis for transparency
-3. **Receive Funding**: Collect investments from platform users
-4. **Make Repayments**: Return principal plus interest according to terms
+1. **Complete Profile**: Set up your business profile with company details and contact information
+2. **Create Proposal**: Submit detailed business plans, financials, and funding goals
+3. **AI Risk Assessment**: Get automated wallet analysis for transparency
+4. **Receive Funding**: Collect investments from platform users
+5. **Make Repayments**: Return principal plus interest according to terms
 
 ## Technology Stack
 

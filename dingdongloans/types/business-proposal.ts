@@ -68,20 +68,40 @@ export type BusinessProposal = {
   full_description: string;
   business_plan: string;
   expected_return: string;
+  duration?: string; // Made optional
   minimum_investment: string;
   maximum_investment: string;
   proposer_wallet: string;
   proposed_at: string;
   deadline: string;
-  status: "active" | "funded" | "expired" | "cancelled";
+  status: "pending" | "active" | "funded" | "expired" | "cancelled";
   current_funding: string;
   target_funding: string;
   investor_count: number;
   website?: string;
   social_media?: SocialMediaLinks;
   documents: Document[];
-  wallet_analysis?: APIWalletAnalysis; // Changed to use API type
+  wallet_analysis?: APIWalletAnalysis;
   created_at: string;
   updated_at: string;
   tags: string[];
 };
+
+// Helper type for API wallet analysis
+export interface APIWalletAnalysis {
+  id: number;
+  wallet_address: string;
+  network: string;
+  analysis_timestamp: string;
+  final_score: number;
+  risk_level: string;
+  wallet_metadata: {
+    age: string;
+    activity_level: string;
+    transaction_count: number;
+    unique_interactions: number;
+  };
+  comments?: string[];
+  created_at: string;
+  updated_at: string;
+}

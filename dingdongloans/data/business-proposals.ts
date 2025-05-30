@@ -1,6 +1,6 @@
 import type { BusinessProposal } from "@/types/business-proposal";
 import { api } from "@/hooks/use-axios";
-import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
+import { getOrAnalyzeWallet, getUserProfile } from "@/data/wallet-analysis-api";
 
 // Function to fetch business proposals from the API
 export const fetchBusinessProposals = async (
@@ -103,7 +103,7 @@ export const fetchBusinessProposals = async (
     return proposalsWithAnalysis;
   } catch (error) {
     console.error("Error fetching business proposals:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -123,6 +123,79 @@ export const getBusinessProposalById = async (
   } catch (error) {
     console.error("Error fetching business proposal:", error);
     return null;
+  }
+};
+
+export const checkProfileCompletion = async (): Promise<{
+  complete: boolean;
+  missingFields: string[];
+}> => {
+  try {
+    const profile = await getUserProfile();
+    const requiredFields = [
+      "display_name",
+      "email",
+      "company_name",
+      "company_position",
+      "company_website",
+      "company_description",
+    ];
+    const missingFields = requiredFields.filter(
+      (field) => !profile[field as keyof typeof profile]
+    );
+
+    return {
+      complete: missingFields.length === 0,
+      missingFields,
+    };
+  } catch (error) {
+    return {
+      complete: false,
+      missingFields: [
+        "display_name",
+        "email",
+        "company_name",
+        "company_position",
+        "company_website",
+        "company_description",
+      ],
+    };
+  }
+};
+
+// Add function to get user's own proposals
+export const getUserProposals = async (): Promise<BusinessProposal[]> => {
+  try {
+    const { data } = await api.get("/proposals/me");
+
+    // Fetch wallet analysis for each proposal
+    const proposalsWithAnalysis = await Promise.all(
+      data.proposals.map(async (proposal: any) => {
+        try {
+          const walletAnalysis = await getOrAnalyzeWallet(
+            proposal.proposer_wallet
+          );
+          return {
+            ...proposal,
+            wallet_analysis: walletAnalysis,
+          };
+        } catch (error) {
+          console.error(
+            `Failed to get wallet analysis for ${proposal.proposer_wallet}:`,
+            error
+          );
+          return {
+            ...proposal,
+            wallet_analysis: undefined,
+          };
+        }
+      })
+    );
+
+    return proposalsWithAnalysis;
+  } catch (error) {
+    console.error("Error fetching user proposals:", error);
+    throw error;
   }
 };
 
