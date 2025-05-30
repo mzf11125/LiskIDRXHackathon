@@ -10,26 +10,26 @@ import {
 
 export type ProposalData = {
   id?: string;
-  companyName: string;
-  acceptedToken: string;
-  shortDescription: string;
-  fullDescription: string;
-  businessPlan: string;
-  expectedReturn: string;
-  targetFunding: string;
-  minimumInvestment: string;
-  maximumInvestment: string;
+  company_name: string;
+  accepted_token: string;
+  short_description: string;
+  full_description: string;
+  business_plan: string;
+  expected_return: string;
+  target_funding: string;
+  minimum_investment: string;
+  maximum_investment: string;
   deadline: Date;
   website?: string;
   twitter?: string;
   linkedin?: string;
   telegram?: string;
-  proposerWallet: string;
-  proposedAt: string;
-  currentFunding: string;
-  investorCount: number;
+  proposer_wallet: string;
+  proposed_at: string;
+  current_funding: string;
+  investor_count: number;
   status: "pending" | "active" | "funded" | "expired" | "cancelled";
-  duration?: string; // Made optional
+  duration?: string;
   [key: string]: any;
 };
 
@@ -64,10 +64,10 @@ const proposalsAPI = {
         id: `proposal-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 9)}`,
-        proposerWallet: address,
-        proposedAt: new Date().toISOString(),
-        currentFunding: "0",
-        investorCount: 0,
+        proposer_wallet: address,
+        proposed_at: new Date().toISOString(),
+        current_funding: "0",
+        investor_count: 0,
         status: "active" as const,
       };
 
@@ -156,19 +156,7 @@ export function useProposals() {
 
       setIsLoading(true);
       try {
-        // Check profile completion first
-        const profileCheck = await checkProfileCompletion();
-        if (!profileCheck.complete) {
-          toast({
-            variant: "destructive",
-            title: "Profile incomplete",
-            description: `Please complete your profile first. Missing: ${profileCheck.missingFields.join(
-              ", "
-            )}`,
-          });
-          return null;
-        }
-
+        // Profile check is now handled in the form component
         const newProposal = await createBusinessProposal(proposalData as any);
         setMyProposals([...myProposals, newProposal]);
 

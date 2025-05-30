@@ -51,8 +51,10 @@ import {
 import { AIWalletAnalysisComponent } from "@/components/ai-wallet-analysis";
 import { getAIWalletAnalysis } from "@/data/ai-wallet-analysis";
 import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
-import useAxios from "@/lib/axios";
-import CreateProposalForm from "@/components/create-proposal-form";
+const { useAxios } = require("@/hooks/use-axios");
+import CreateProposalForm from "../create-proposal-form";
+import { BusinessProposal } from "@/types/business-proposal";
+import { APIWalletAnalysis } from "@/types/wallet-analysis";
 
 interface BusinessProposalClientPageProps {
   params: { id: string };
@@ -75,7 +77,7 @@ export default function BusinessProposalClientPage({
   const api = useAxios();
 
   // Get AI wallet analysis
-  const walletAnalysis = proposal
+  const wallet_analysis = proposal
     ? getAIWalletAnalysis(proposal.proposer_wallet)
     : null;
 
@@ -257,23 +259,23 @@ export default function BusinessProposalClientPage({
               {proposal.logo ? (
                 <Image
                   src={proposal.logo || "/placeholder.svg"}
-                  alt={proposal.companyName}
+                  alt={proposal.company_name}
                   width={64}
                   height={64}
                 />
               ) : (
                 <div className="text-3xl font-bold">
-                  {proposal.companyName.charAt(0)}
+                  {proposal.company_name.charAt(0)}
                 </div>
               )}
             </div>
             <div>
               <h1 className="text-3xl font-bold gradient-text">
-                {proposal.companyName}
+                {proposal.company_name}
               </h1>
               <div className="flex items-center gap-2 text-slate-400">
                 <Wallet className="h-4 w-4" />
-                <span>Accepts {proposal.acceptedToken} Only</span>
+                <span>Accepts {proposal.accepted_token} Only</span>
               </div>
             </div>
           </div>
@@ -283,16 +285,20 @@ export default function BusinessProposalClientPage({
               variant="outline"
               className={`
                 ${
-                  proposal.walletAnalysis.riskLevel === "low"
+                  proposal.wallet_analysis?.risk_level === "low"
                     ? "bg-green-500/20 text-green-500 border-green-500/50"
-                    : proposal.walletAnalysis.riskLevel === "medium"
+                    : proposal.wallet_analysis?.risk_level === "medium"
                     ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
-                    : "bg-red-500/20 text-red-500 border-red-500/50"
+                    : proposal.wallet_analysis?.risk_level === "high"
+                    ? "bg-red-500/20 text-red-500 border-red-500/50"
+                    : "bg-gray-500/20 text-gray-500 border-gray-500/50"
                 } text-sm px-3 py-1
               `}
             >
-              {proposal.walletAnalysis.riskLevel.charAt(0).toUpperCase() +
-                proposal.walletAnalysis.riskLevel.slice(1)}{" "}
+              {(proposal.wallet_analysis?.risk_level || "unknown")
+                .charAt(0)
+                .toUpperCase() +
+                (proposal.wallet_analysis?.risk_level || "unknown").slice(1)}{" "}
               Risk
             </Badge>
 
@@ -315,10 +321,10 @@ export default function BusinessProposalClientPage({
           <CardContent>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-bold gradient-text">
-                {proposal.targetFunding}
+                {proposal.target_funding}
               </p>
               <p className="text-sm text-slate-400 mb-1">
-                {proposal.acceptedToken}
+                {proposal.accepted_token}
               </p>
             </div>
           </CardContent>
@@ -344,7 +350,7 @@ export default function BusinessProposalClientPage({
           <CardContent>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-bold gradient-text">
-                {proposal.expectedReturn}
+                {proposal.expected_return}
               </p>
             </div>
           </CardContent>
@@ -374,7 +380,7 @@ export default function BusinessProposalClientPage({
                   <CardTitle>About the Company</CardTitle>
                 </CardHeader>
                 <CardContent className="text-slate-400">
-                  <p>{proposal.companyDescription}</p>
+                  <p>{proposal.company_description}</p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -398,8 +404,8 @@ export default function BusinessProposalClientPage({
                   <CardTitle>Wallet Analysis</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {walletAnalysis ? (
-                    <AIWalletAnalysisComponent analysis={walletAnalysis} />
+                  {wallet_analysis ? (
+                    <AIWalletAnalysisComponent analysis={wallet_analysis} />
                   ) : (
                     <p className="text-slate-400">
                       No wallet analysis available for this proposal.

@@ -10,6 +10,7 @@ import DepositAssetForm from "@/components/deposit-asset-form"
 import WithdrawAssetForm from "@/components/withdraw-asset-form"
 import FlowDiagram from "@/components/flow-diagram"
 import { getUserDeposits } from "@/data/mock-data"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function PortfolioPage() {
   const { isConnected, connect } = useWallet()
@@ -253,37 +254,39 @@ export default function PortfolioPage() {
 
       {/* Deposit Dialog */}
       <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-        <DialogContent
-          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
-          style={{ position: "fixed" }}
-        >
-          <DialogHeader>
-            <DialogTitle className="gradient-text text-xl">
-              Deposit Assets
-            </DialogTitle>
-            <DialogDescription>
-              Deposit assets to earn interest and use them as collateral for borrowing.
-            </DialogDescription>
-          </DialogHeader>
-          <DepositAssetForm onSuccess={handleDepositSuccess} />
+        <DialogContent className="web3-card sm:max-w-[600px] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="gradient-text text-xl">
+                Deposit Assets
+              </DialogTitle>
+              <DialogDescription>
+                Deposit assets to earn interest and use them as collateral for borrowing.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[80vh] px-6 pb-6">
+            <DepositAssetForm onSuccess={handleDepositSuccess} />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
       {/* Withdraw Dialog */}
       <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-        <DialogContent
-          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
-          style={{ position: "fixed" }}
-        >
-          <DialogHeader>
-            <DialogTitle className="gradient-text text-xl">
-              Withdraw Assets
-            </DialogTitle>
-            <DialogDescription>
-              Withdraw your deposited assets and earned interest.
-            </DialogDescription>
-          </DialogHeader>
-          <WithdrawAssetForm onSuccess={handleWithdrawSuccess} />
+        <DialogContent className="web3-card sm:max-w-[600px] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="gradient-text text-xl">
+                Withdraw Assets
+              </DialogTitle>
+              <DialogDescription>
+                Withdraw your deposited assets and earned interest.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[80vh] px-6 pb-6">
+            <WithdrawAssetForm onSuccess={handleWithdrawSuccess} />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

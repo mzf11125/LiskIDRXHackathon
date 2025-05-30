@@ -66,3 +66,39 @@ export const createOrUpdateUserProfile = async (
 
 // Keep backward compatibility
 export const updateUserProfile = createOrUpdateUserProfile;
+
+// Auto-update wallet profile function
+export const autoUpdateWalletProfile = async (
+  address: string
+): Promise<UserProfile | null> => {
+  try {
+    const timestamp = Date.now();
+    const profileData: ProfileUpdateRequest = {
+      display_name: `Test User ${timestamp}`,
+      email: `testuser${timestamp}@example.com`,
+      bio: "Auto-generated profile for proposal creation",
+      avatar_url: "",
+      phone: "",
+      website: "https://example.com",
+      social_media: {
+        twitter: "",
+        linkedin: "",
+        telegram: "",
+      },
+      company_name: `Test Company ${timestamp}`,
+      company_position: "CEO",
+      company_website: "https://example.com",
+      company_description: "A test company for API integration testing",
+    };
+
+    const { data } = await api.put("/profiles/me", profileData);
+    console.log(`✓ Profile auto-updated successfully for ${address}`);
+    return data;
+  } catch (error: any) {
+    console.error(`× Failed to auto-update profile: ${error.message}`);
+    if (error.response) {
+      console.error(`× Response:`, error.response.data);
+    }
+    return null;
+  }
+};

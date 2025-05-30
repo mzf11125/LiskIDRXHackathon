@@ -56,11 +56,11 @@ export default function PoolDetailClient({
 	const { toast } = useToast();
 	const [activeTab, setActiveTab] = useState("overview");
 
-	// Supply-related state
-	const [isSupplyDialogOpen, setIsSupplyDialogOpen] = useState(false);
+	// Deposit-related state
+	const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
 	const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
 	const [selectedAsset, setSelectedAsset] = useState<any>(null);
-	const [supplyAmount, setSupplyAmount] = useState("");
+	const [depositAmount, setDepositAmount] = useState("");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
 
 	// Get borrower data
@@ -77,8 +77,8 @@ export default function PoolDetailClient({
 	// Check if borrower is eligible for this pool
 	const isEligible = borrower?.eligiblePools.includes(params.id) || false;
 
-	const handleSupplySubmit = () => {
-		if (!supplyAmount || Number.parseFloat(supplyAmount) <= 0) {
+	const handleDepositSubmit = () => {
+		if (!depositAmount || Number.parseFloat(depositAmount) <= 0) {
 			toast({
 				variant: "destructive",
 				title: "Invalid amount",
@@ -87,7 +87,7 @@ export default function PoolDetailClient({
 			return;
 		}
 
-		const amount = Number.parseFloat(supplyAmount);
+		const amount = Number.parseFloat(depositAmount);
 		const walletBalance = Number.parseFloat(
 			selectedAsset.walletBalance.replace(/,/g, "")
 		);
@@ -103,10 +103,10 @@ export default function PoolDetailClient({
 
 		toast({
 			title: "Supply successful",
-			description: `You have successfully supplied ${supplyAmount} ${selectedAsset.symbol} to the pool.`,
+			description: `You have successfully supplied ${depositAmount} ${selectedAsset.symbol} to the pool.`,
 		});
-		setIsSupplyDialogOpen(false);
-		setSupplyAmount("");
+		setIsDepositDialogOpen(false);
+		setDepositAmount("");
 		setSelectedAsset(null);
 	};
 
@@ -129,9 +129,9 @@ export default function PoolDetailClient({
 		setSelectedAsset(null);
 	};
 
-	const openSupplyDialog = (asset: any) => {
+	const openDepositDialog = (asset: any) => {
 		setSelectedAsset(asset);
-		setIsSupplyDialogOpen(true);
+		setIsDepositDialogOpen(true);
 	};
 
 	const openWithdrawDialog = (asset: any) => {
@@ -564,7 +564,7 @@ export default function PoolDetailClient({
 												</div>
 												<div className="flex gap-2">
 													<Button
-														onClick={() => openSupplyDialog(asset)}
+														onClick={() => openDepositDialog(asset)}
 														className="flex-1 web3-button"
 														size="sm"
 													>
@@ -629,7 +629,7 @@ export default function PoolDetailClient({
 															const asset = pool.assets.find(
 																(a) => a.symbol === supply.asset
 															);
-															if (asset) openSupplyDialog(asset);
+															if (asset) openDepositDialog(asset);
 														}}
 														variant="outline"
 														className="flex-1"
@@ -915,7 +915,7 @@ export default function PoolDetailClient({
 			</Tabs>
 
 			{/* Supply Dialog */}
-			<Dialog open={isSupplyDialogOpen} onOpenChange={setIsSupplyDialogOpen}>
+			<Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
 				<DialogContent className="web3-card sm:max-w-md">
 					<DialogHeader>
 						<DialogTitle className="gradient-text">
@@ -946,14 +946,14 @@ export default function PoolDetailClient({
 								<Input
 									id="supply-amount"
 									placeholder={`0.00 ${selectedAsset?.symbol}`}
-									value={supplyAmount}
-									onChange={(e) => setSupplyAmount(e.target.value)}
+									value={depositAmount}
+									onChange={(e) => setDepositAmount(e.target.value)}
 									className="bg-slate-800 border-slate-700"
 								/>
 								<Button
 									variant="outline"
 									onClick={() =>
-										setSupplyAmount(
+										setDepositAmount(
 											selectedAsset?.walletBalance || ""
 										)
 									}
@@ -972,7 +972,7 @@ export default function PoolDetailClient({
 								<div className="flex justify-between">
 									<span className="text-slate-400">Amount</span>
 									<span>
-										{supplyAmount || "0.00"}{" "}
+										{depositAmount || "0.00"}{" "}
 										{selectedAsset?.symbol}
 									</span>
 								</div>
@@ -987,10 +987,10 @@ export default function PoolDetailClient({
 										Est. Annual Earnings
 									</span>
 									<span className="text-green-500">
-										{supplyAmount &&
-										!isNaN(Number.parseFloat(supplyAmount))
+										{depositAmount &&
+										!isNaN(Number.parseFloat(depositAmount))
 											? (
-													Number.parseFloat(supplyAmount) *
+													Number.parseFloat(depositAmount) *
 													(Number.parseFloat(
 														selectedAsset?.supplyApr?.replace(
 															"%", ""
@@ -1008,11 +1008,11 @@ export default function PoolDetailClient({
 					<DialogFooter>
 						<Button
 							variant="outline"
-							onClick={() => setIsSupplyDialogOpen(false)}
+							onClick={() => setIsDepositDialogOpen(false)}
 						>
 							Cancel
 						</Button>
-						<Button onClick={handleSupplySubmit} className="web3-button">
+						<Button onClick={handleDepositSubmit} className="web3-button">
 							Supply
 						</Button>
 					</DialogFooter>

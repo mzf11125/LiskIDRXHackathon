@@ -61,6 +61,7 @@ export type FraudRiskAnalysis = {
 export type BusinessProposal = {
   id: string;
   company_name: string;
+  company_description?: string;
   logo?: string;
   accepted_token: string;
   total_pooled: string;
@@ -68,7 +69,7 @@ export type BusinessProposal = {
   full_description: string;
   business_plan: string;
   expected_return: string;
-  duration?: string; // Made optional
+  duration?: string;
   minimum_investment: string;
   maximum_investment: string;
   proposer_wallet: string;

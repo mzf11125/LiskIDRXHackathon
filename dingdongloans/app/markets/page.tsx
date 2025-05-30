@@ -2,12 +2,30 @@
 
 import { useState } from "react"
 import { Search, ArrowUpDown, Info, Plus } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import DepositAssetForm from "@/components/deposit-asset-form"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function MarketsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -291,7 +309,7 @@ export default function MarketsPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
-                <span className="text-slate-400">Highest Deposit APR</span>
+                <span className="text-slate-400">Highest Deposit APY</span>
                 <span className="font-bold text-primary">8.2% (IDRX)</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
@@ -313,22 +331,23 @@ export default function MarketsPage() {
 
       {/* Deposit Dialog */}
       <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-        <DialogContent
-          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
-          style={{ position: "fixed" }}
-        >
-          <DialogHeader>
-            <DialogTitle className="gradient-text text-xl">
-              Deposit {selectedAssetForDeposit}
-            </DialogTitle>
-            <DialogDescription>
-              Deposit {selectedAssetForDeposit} to earn interest and use it as collateral for borrowing.
-            </DialogDescription>
-          </DialogHeader>
-          <DepositAssetForm
-            onSuccess={handleDepositSuccess}
-            preselectedAsset={selectedAssetForDeposit}
-          />
+        <DialogContent className="web3-card sm:max-w-[600px] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="gradient-text text-xl">
+                Deposit {selectedAssetForDeposit}
+              </DialogTitle>
+              <DialogDescription>
+                Deposit {selectedAssetForDeposit} to earn interest and use it as collateral for borrowing.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[80vh] px-6 pb-6">
+            <DepositAssetForm
+              onSuccess={handleDepositSuccess}
+              preselectedAsset={selectedAssetForDeposit}
+            />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

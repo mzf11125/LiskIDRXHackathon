@@ -119,6 +119,13 @@ export type APIWalletAnalysis = {
 export type UserProfile = {
   display_name: string;
   email: string;
+  bio?: string;
+  avatar_url?: string;
+  phone?: string;
+  website?: string;
+  social_media?: {
+    [key: string]: string;
+  };
   company_name: string;
   company_position: string;
   company_website: string;
@@ -127,10 +134,21 @@ export type UserProfile = {
   updated_at?: string;
 };
 
-export type ProfileUpdateRequest = Omit<
-  UserProfile,
-  "created_at" | "updated_at"
->;
+export type ProfileUpdateRequest = {
+  display_name: string;
+  email: string;
+  bio?: string;
+  avatar_url?: string;
+  phone?: string;
+  website?: string;
+  social_media?: {
+    [key: string]: string;
+  };
+  company_name: string;
+  company_position: string;
+  company_website: string;
+  company_description: string;
+};
 
 // Keep existing AIWalletAnalysis type for backward compatibility
 export type AIWalletAnalysis = {

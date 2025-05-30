@@ -21,7 +21,7 @@ IDRX Lending Platform is a decentralized finance (DeFi) application that connect
 
 ### Key Features
 
-- **Lending Pools**: Supply assets to liquidity pools and earn competitive interest rates
+- **Lending Pools**: Deposit assets to liquidity pools and provide collateral for borrowing
 - **Borrowing**: Borrow crypto by providing collateral with transparent terms
 - **Business Funding**: Create and invest in business proposals with detailed risk analysis
 - **AI-Powered Risk Assessment**: Advanced wallet analysis to evaluate borrower creditworthiness

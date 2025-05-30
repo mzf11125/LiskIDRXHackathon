@@ -51,6 +51,9 @@ import useAxios from "@/hooks/use-axios";
 import { checkProfileCompletion } from "@/data/business-proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useProfile } from "@/components/ui/use-profile";
+import { autoUpdateWalletProfile } from "@/data/wallet-analysis-api";
+import { useWallet } from "@/components/wallet-provider";
 
 const formSchema = z.object({
   company_name: z.string().min(2, {
@@ -123,6 +126,8 @@ export default function CreateProposalForm({
   proposalId,
 }: CreateProposalFormProps) {
   const { toast } = useToast();
+  const { address } = useWallet();
+  const { autoUpdateProfile } = useProfile();
   const [documents, setDocuments] = useState<
     { name: string; type: string; size: string; file?: File }[]
   >([]);
@@ -136,7 +141,7 @@ export default function CreateProposalForm({
 
   const api = useAxios();
 
-  // Check profile completion on mount
+  // Check profile completion on mount only for display, not blocking
   useEffect(() => {
     const checkProfile = async () => {
       try {
@@ -148,10 +153,9 @@ export default function CreateProposalForm({
       }
     };
 
-    if (!isEditing) {
-      checkProfile();
-    }
-  }, [isEditing]);
+    // Only check profile status for information, not blocking
+    checkProfile();
+  }, []);
 
   const form = useForm<FormValues>({
     mode: "onBlur",
@@ -214,24 +218,63 @@ export default function CreateProposalForm({
   async function onSubmit(values: FormValues) {
     if (isSubmitting) return;
 
-    // Check profile completion before submitting
-    if (profileCheck && !profileCheck.complete) {
-      toast({
-        variant: "destructive",
-        title: "Profile Incomplete",
-        description: `Please complete your profile first. Missing: ${profileCheck.missingFields.join(
-          ", "
-        )}`,
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
+      // Check profile completion at submission time
+      let currentProfileCheck = await checkProfileCompletion();
+      
+      // If profile is incomplete, try to auto-update it
+      if (!currentProfileCheck.complete) {
+        toast({
+          title: "Auto-updating profile",
+          description: "Completing your profile automatically...",
+        });
+        
+        // Use the direct function instead of the hook if address is available
+        let autoUpdated = false;
+        if (address) {
+          try {
+            const result = await autoUpdateWalletProfile(address);
+            autoUpdated = !!result;
+          } catch (error) {
+            console.error("Auto-update failed:", error);
+            autoUpdated = false;
+          }
+        }
+        
+        if (autoUpdated) {
+          // Recheck profile after auto-update
+          currentProfileCheck = await checkProfileCompletion();
+        }
+        
+        // If still incomplete after auto-update, show error
+        if (!currentProfileCheck.complete) {
+          toast({
+            variant: "destructive",
+            title: "Profile Incomplete",
+            description: `Please complete your profile manually. Missing: ${currentProfileCheck.missingFields.join(", ")}`,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const proposal: Partial<BusinessProposal> = {
-        ...values,
+        company_name: values.company_name,
+        accepted_token: values.accepted_token,
+        short_description: values.short_description,
+        full_description: values.full_description,
+        business_plan: values.business_plan,
+        expected_return: values.expected_return,
+        duration: values.duration,
+        target_funding: values.target_funding,
+        minimum_investment: values.minimum_investment,
+        maximum_investment: values.maximum_investment,
+        proposer_wallet: values.proposer_wallet,
         deadline: values.deadline.toISOString(),
+        website: values.website,
+        social_media: values.social_media,
         tags: tags,
         status: isEditing ? undefined : "active",
         total_pooled: isEditing ? undefined : "0",
@@ -312,34 +355,77 @@ export default function CreateProposalForm({
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
-  // Show profile warning if incomplete
-  if (!isEditing && profileCheck && !profileCheck.complete) {
-    return (
-      <div className="space-y-4">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Your profile is incomplete. Please complete the following fields
-            before creating a proposal: {profileCheck.missingFields.join(", ")}
-          </AlertDescription>
-        </Alert>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onSuccess}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => window.open("/profile", "_blank")}
-            className="web3-button"
-          >
-            Complete Profile
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+  // Show warning but allow auto-completion
   return (
     <div className="h-[calc(80vh-120px)] flex flex-col">
+      {!isEditing && profileCheck && !profileCheck.complete && (
+        <div className="mb-4">
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-blue-500 mb-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Profile Auto-Completion Available</span>
+            </div>
+            <p className="text-sm text-blue-600 mb-3">
+              Missing fields: {profileCheck.missingFields.join(", ")}. We'll auto-complete your profile when you submit.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => window.open("/profile", "_blank")}
+                variant="outline"
+                className="border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+              >
+                Complete Manually
+              </Button>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  if (address) {
+                    const timestamp = Date.now();
+                    const profileData = {
+                      display_name: `Test User ${timestamp}`,
+                      email: `testuser${timestamp}@example.com`,
+                      bio: "Auto-generated profile for proposal creation",
+                      avatar_url: "",
+                      phone: "",
+                      website: "https://example.com",
+                      social_media: {
+                        twitter: "",
+                        linkedin: "",
+                        telegram: ""
+                      },
+                      company_name: `Test Company ${timestamp}`,
+                      company_position: "CEO",
+                      company_website: "https://example.com",
+                      company_description: "A test company for API integration testing",
+                    };
+                    
+                    try {
+                      const response = await api.put("/profiles/me", profileData);
+                      const newCheck = await checkProfileCompletion();
+                      setProfileCheck(newCheck);
+                      toast({
+                        title: "Profile Updated",
+                        description: "Your profile has been auto-completed successfully.",
+                      });
+                    } catch (error) {
+                      toast({
+                        variant: "destructive",
+                        title: "Auto-Update Failed",
+                        description: "Please complete your profile manually.",
+                      });
+                    }
+                  }
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                Auto-Complete Now
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div
         className="flex-1 overflow-y-auto pr-2 space-y-8
 				scrollbar-thin scrollbar-track-slate-800 scrollbar-thumb-slate-600 

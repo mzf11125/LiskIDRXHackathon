@@ -21,7 +21,7 @@ export default function AboutPage() {
                     {[
                         {
                             title: "Lending Pools",
-                            description: "Supply your digital assets to liquidity pools and earn competitive interest rates.",
+                            description: "Deposit your digital assets to liquidity pools and use them as collateral for borrowing.",
                             icon: <TrendingUp className="h-10 w-10 text-primary" />,
                         },
                         {

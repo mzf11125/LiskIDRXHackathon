@@ -56,15 +56,16 @@ import { useProfile } from "@/components/ui/use-profile";
 import { checkProfileCompletion } from "@/data/business-proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { User, AlertTriangle } from "lucide-react";
-import useAxios from "@/hooks/use-axios";
+import api from "@/hooks/use-axios";
 import { useToast } from "@/components/ui/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 export default function BorrowPage() {
   const { isConnected, connect, address } = useWallet();
   const { profile, fetchProfile, isProfileComplete } = useProfile();
   const router = useRouter();
   const { toast } = useToast();
-  const api = useAxios();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false);
@@ -105,7 +106,7 @@ export default function BorrowPage() {
     loadProposals();
   }, [isConnected, address]);
 
-  // Check profile completion on mount
+  // Check profile completion on mount (for information only)
   useEffect(() => {
     if (isConnected && address) {
       const checkProfile = async () => {
@@ -201,68 +202,8 @@ export default function BorrowPage() {
     );
   }
 
-  // Show profile completion requirement
-  if (!isCheckingProfile && !profileStatus.complete) {
-    return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto">
-          <Card className="web3-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <User className="h-8 w-8 text-primary" />
-                <div>
-                  <CardTitle className="text-2xl gradient-text">
-                    Complete Your Profile
-                  </CardTitle>
-                  <p className="text-slate-400 mt-2">
-                    You need to complete your business profile before creating
-                    proposals.
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Missing required fields:{" "}
-                  {profileStatus.missingFields.join(", ")}
-                </AlertDescription>
-              </Alert>
-
-              <div className="bg-slate-800/50 rounded-lg p-4">
-                <h3 className="font-semibold mb-3">Required Information:</h3>
-                <ul className="space-y-2 text-sm text-slate-400">
-                  <li>• Display Name</li>
-                  <li>• Email Address</li>
-                  <li>• Company Name</li>
-                  <li>• Your Position in Company</li>
-                  <li>• Company Website</li>
-                  <li>• Company Description</li>
-                </ul>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => router.push("/profile")}
-                  className="web3-button flex-1"
-                >
-                  Complete Profile
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.reload()}
-                  className="flex-1"
-                >
-                  Refresh Status
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Don't block the entire page, just show a warning
+  // Remove the profile completion blocking section
 
   if (loading) {
     return (
@@ -293,6 +234,29 @@ export default function BorrowPage() {
           </Card>
         </div>
       </div>
+
+      {/* Show profile warning if incomplete but don't block */}
+      {!isCheckingProfile && !profileStatus.complete && (
+        <div className="mb-6">
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-yellow-500 mb-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Profile Incomplete</span>
+            </div>
+            <p className="text-sm text-yellow-600 mb-3">
+              Complete your profile to create business proposals. Missing:{" "}
+              {profileStatus.missingFields.join(", ")}
+            </p>
+            <Button
+              size="sm"
+              onClick={() => window.open("/profile", "_blank")}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+            >
+              Complete Profile
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="crypto" className="space-y-8">
         <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2 bg-slate-800/50">
@@ -436,22 +400,23 @@ export default function BorrowPage() {
                         <DollarSign className="mr-2 h-4 w-4" /> Borrow Crypto
                       </Button>
                     </DialogTrigger>
-                    <DialogContent
-                      className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
-                      style={{ position: "fixed" }}
-                    >
-                      <DialogHeader>
-                        <DialogTitle className="gradient-text text-xl">
-                          Borrow Cryptocurrency
-                        </DialogTitle>
-                        <DialogDescription>
-                          Borrow crypto assets by providing collateral. Monitor
-                          your health factor to avoid liquidation.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <BorrowCryptoForm
-                        onSuccess={() => setIsBorrowDialogOpen(false)}
-                      />
+                    <DialogContent className="web3-card sm:max-w-[700px] p-0">
+                      <div className="p-6 pb-0">
+                        <DialogHeader>
+                          <DialogTitle className="gradient-text text-xl">
+                            Borrow Cryptocurrency
+                          </DialogTitle>
+                          <DialogDescription>
+                            Borrow crypto assets by providing collateral. Monitor
+                            your health factor to avoid liquidation.
+                          </DialogDescription>
+                        </DialogHeader>
+                      </div>
+                      <div className="px-6 pb-6">
+                        <BorrowCryptoForm
+                          onSuccess={() => setIsBorrowDialogOpen(false)}
+                        />
+                      </div>
                     </DialogContent>
                   </Dialog>
 
@@ -576,17 +541,21 @@ export default function BorrowPage() {
                   <PlusCircle className="mr-2 h-4 w-4" /> Create Proposal
                 </Button>
               </DialogTrigger>
-              <DialogContent className="web3-card sm:max-w-[800px] max-h-[90vh]">
-                <DialogHeader>
-                  <DialogTitle className="gradient-text text-xl">
-                    Create Business Proposal
-                  </DialogTitle>
-                  <DialogDescription>
-                    Fill out the form below to create a new business proposal
-                    for funding.
-                  </DialogDescription>
-                </DialogHeader>
-                <CreateProposalForm onSuccess={handleProposalSuccess} />
+              <DialogContent className="web3-card sm:max-w-[800px] p-0">
+                <div className="p-6 pb-0">
+                  <DialogHeader>
+                    <DialogTitle className="gradient-text text-xl">
+                      Create Business Proposal
+                    </DialogTitle>
+                    <DialogDescription>
+                      Fill out the form below to create a new business proposal
+                      for funding.
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
+                <ScrollArea className="max-h-[80vh] px-6 pb-6">
+                  <CreateProposalForm onSuccess={handleProposalSuccess} />
+                </ScrollArea>
               </DialogContent>
             </Dialog>
           </div>
@@ -1016,23 +985,27 @@ export default function BorrowPage() {
 
       {/* Edit Proposal Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="web3-card sm:max-w-[800px] max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="gradient-text text-xl">
-              Edit Business Proposal
-            </DialogTitle>
-            <DialogDescription>
-              Update your business proposal details.
-            </DialogDescription>
-          </DialogHeader>
-          {editingProposal && (
-            <CreateProposalForm
-              onSuccess={handleProposalSuccess}
-              initialData={editingProposal}
-              isEditing={true}
-              proposalId={editingProposal.id}
-            />
-          )}
+        <DialogContent className="web3-card sm:max-w-[800px] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="gradient-text text-xl">
+                Edit Business Proposal
+              </DialogTitle>
+              <DialogDescription>
+                Update your business proposal details.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[80vh] px-6 pb-6">
+            {editingProposal && (
+              <CreateProposalForm
+                onSuccess={handleProposalSuccess}
+                initialData={editingProposal}
+                isEditing={true}
+                proposalId={editingProposal.id}
+              />
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

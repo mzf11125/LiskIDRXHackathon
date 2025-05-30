@@ -26,8 +26,8 @@ import {
   Activity,
 } from "lucide-react";
 import { useWallet } from "@/components/wallet-provider";
-import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
 import { useProfile } from "@/components/ui/use-profile";
+import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
 import type { APIWalletAnalysis } from "@/types/wallet-analysis";
 
 interface CreditScoreAnalysis {
@@ -59,8 +59,8 @@ interface CreditScoreAnalysis {
 }
 
 export default function WalletAnalytics() {
-  const { address, isConnected } = useWallet();
-  const { profile, fetchProfile, isProfileComplete } = useProfile();
+  const { address, isConnected, isAuthenticated, authenticate } = useWallet();
+  const { profile, fetchProfile, isProfileComplete, autoUpdateProfile } = useProfile();
   const [walletAnalysis, setWalletAnalysis] =
     useState<APIWalletAnalysis | null>(null);
   const [creditScore, setCreditScore] = useState<CreditScoreAnalysis | null>(
@@ -70,13 +70,22 @@ export default function WalletAnalytics() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (isConnected && address && isAuthenticated) {
       loadAnalytics();
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isAuthenticated]);
 
   const loadAnalytics = async () => {
     if (!address) return;
+
+    if (!isAuthenticated) {
+      try {
+        await authenticate();
+      } catch (error) {
+        setError("Authentication failed");
+        return;
+      }
+    }
 
     setIsLoading(true);
     setError(null);
@@ -96,9 +105,20 @@ export default function WalletAnalytics() {
         isProfileComplete()
       );
       setCreditScore(creditAnalysis);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading analytics:", error);
-      setError("Failed to load analytics data");
+      if (error.response?.status === 401) {
+        setError("Authentication required - please sign the message");
+        try {
+          await authenticate();
+          // Retry after authentication
+          await loadAnalytics();
+        } catch (authError) {
+          setError("Failed to authenticate");
+        }
+      } else {
+        setError("Failed to load analytics data");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -250,6 +270,22 @@ export default function WalletAnalytics() {
         return "bg-slate-500/20 text-slate-500 border-slate-500/50";
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <Card className="web3-card">
+        <CardContent className="text-center py-8">
+          <Shield className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+          <p className="text-slate-400 mb-4">
+            Authentication required to view analytics
+          </p>
+          <Button onClick={authenticate} variant="outline">
+            Authenticate Wallet
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!isConnected) {
     return (

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import DepositAssetForm from "@/components/deposit-asset-form";
 import { getUserDeposits } from "@/data/mock-data";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Home() {
   const { isConnected, connect } = useWallet();
@@ -309,7 +310,7 @@ export default function Home() {
             >
               <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 mb-8 bg-slate-800/50">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="supply">Supply</TabsTrigger>
+                <TabsTrigger value="deposit">Deposit</TabsTrigger>
                 <TabsTrigger value="borrow">Borrow</TabsTrigger>
               </TabsList>
 
@@ -439,12 +440,12 @@ export default function Home() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="supply" className="space-y-6">
+              <TabsContent value="deposit" className="space-y-6">
                 <Card className="web3-card">
                   <CardHeader>
                     <CardTitle>Assets to Deposit</CardTitle>
                     <CardDescription>
-                      Supply assets to earn interest and use as collateral
+                      Deposit assets to use as collateral for borrowing
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -463,14 +464,14 @@ export default function Home() {
                               <p className="text-xs text-slate-400">
                                 Wallet: 0.00{" "}
                                 {token === "IDRX"
-                                  ? "(Borrowable + Earn interest + Collateral)"
-                                  : "(Collateral + Earn interest)"}
+                                  ? "(Borrowable + Collateral)"
+                                  : "(Collateral only)"}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className="font-medium gradient-text">
-                              {5 + i * 2}% APY
+                              Collateral
                             </p>
                             <Button
                               size="sm"
@@ -514,7 +515,7 @@ export default function Home() {
                         onClick={() => setActiveTab("supply")}
                         className="web3-button group"
                       >
-                        Supply Collateral{" "}
+                        Deposit Collateral{" "}
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </div>
@@ -528,23 +529,24 @@ export default function Home() {
 
       {/* Deposit Dialog */}
       <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-        <DialogContent
-          className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
-          style={{ position: "fixed" }}
-        >
-          <DialogHeader>
-            <DialogTitle className="gradient-text text-xl">
-              Deposit Assets
-            </DialogTitle>
-            <DialogDescription>
-              Deposit assets to earn interest and use them as collateral for
-              borrowing.
-            </DialogDescription>
-          </DialogHeader>
-          <DepositAssetForm
-            onSuccess={handleDepositSuccess}
-            preselectedAsset={selectedAssetForDeposit}
-          />
+        <DialogContent className="web3-card sm:max-w-[600px] p-0">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="gradient-text text-xl">
+                Deposit Assets
+              </DialogTitle>
+              <DialogDescription>
+                Deposit assets to earn interest and use them as collateral for
+                borrowing.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <ScrollArea className="max-h-[80vh] px-6 pb-6">
+            <DepositAssetForm
+              onSuccess={handleDepositSuccess}
+              preselectedAsset={selectedAssetForDeposit}
+            />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

@@ -3,10 +3,17 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, Settings, LogOut, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/components/wallet-provider";
 import { cn } from "@/lib/utils";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export default function Navbar() {
 	const [isOpen, setIsOpen] = useState(false);
@@ -83,17 +90,45 @@ export default function Navbar() {
 					<div className="hidden md:flex items-center">
 						{isConnected ? (
 							<div className="flex items-center gap-2">
-								<div className="glass-effect rounded-full px-4 py-1.5 text-sm font-medium text-white">
-									{truncateAddress(address!)}
-								</div>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={disconnect}
-									className="border-slate-700 text-slate-300 hover:text-white"
-								>
-									Disconnect
-								</Button>
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											className="flex items-center gap-2 glass-effect rounded-full px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800/50"
+										>
+											<UserCircle className="h-4 w-4" />
+											{truncateAddress(address!)}
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent className="w-56 bg-slate-800 border-slate-700">
+										<DropdownMenuItem asChild>
+											<Link
+												href="/profile"
+												className="flex items-center gap-2 cursor-pointer"
+											>
+												<User className="h-4 w-4" />
+												View Profile
+											</Link>
+										</DropdownMenuItem>
+										<DropdownMenuItem asChild>
+											<Link
+												href="/profile/settings"
+												className="flex items-center gap-2 cursor-pointer"
+											>
+												<Settings className="h-4 w-4" />
+												Settings
+											</Link>
+										</DropdownMenuItem>
+										<DropdownMenuSeparator className="bg-slate-700" />
+										<DropdownMenuItem
+											onClick={disconnect}
+											className="flex items-center gap-2 cursor-pointer text-red-400 focus:text-red-300"
+										>
+											<LogOut className="h-4 w-4" />
+											Disconnect Wallet
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
 							</div>
 						) : (
 							<Button onClick={connect} className="web3-button">
@@ -140,14 +175,23 @@ export default function Navbar() {
 						<div className="px-4 flex items-center">
 							{isConnected ? (
 								<div className="flex flex-col w-full gap-2">
-									<div className="glass-effect rounded-full px-4 py-2 text-sm font-medium text-white text-center">
+									<Link
+										href="/profile"
+										className="glass-effect rounded-lg px-4 py-2 text-sm font-medium text-white text-center hover:bg-slate-800/50"
+										onClick={() => setIsOpen(false)}
+									>
+										<User className="h-4 w-4 inline mr-2" />
 										{truncateAddress(address!)}
-									</div>
+									</Link>
 									<Button
 										variant="outline"
-										onClick={disconnect}
+										onClick={() => {
+											disconnect();
+											setIsOpen(false);
+										}}
 										className="border-slate-700 text-slate-300 hover:text-white w-full"
 									>
+										<LogOut className="h-4 w-4 mr-2" />
 										Disconnect
 									</Button>
 								</div>

@@ -297,3 +297,37 @@
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Dialog scroll improvements */
+.dialog-content-scroll {
+  max-height: calc(100vh - 2rem);
+  overflow: hidden;
+}
+
+.dialog-content-scroll .scroll-area-viewport {
+  max-height: calc(80vh - 8rem);
+}
+
+/* Ensure forms work well in scroll areas */
+.form-in-scroll {
+  padding-right: 1rem;
+}
+
+/* Smooth scrolling for all scroll areas */
+.scroll-area-viewport {
+  scroll-behavior: smooth;
+}
+
+/* Better scroll indicators */
+.scroll-area-scrollbar {
+  background: rgba(100, 116, 139, 0.2);
+}
+
+.scroll-area-thumb {
+  background: rgba(100, 116, 139, 0.6);
+  border-radius: 4px;
+}
+
+.scroll-area-thumb:hover {
+  background: rgba(100, 116, 139, 0.8);
+}

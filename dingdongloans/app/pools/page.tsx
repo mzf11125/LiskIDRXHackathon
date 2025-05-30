@@ -310,18 +310,15 @@ export default function PoolsPage() {
                   <th className="text-left p-4">Pool Name</th>
                   <th className="text-center p-4">Risk Level</th>
                   <th className="text-center p-4">TVL</th>
-                  <th className="text-center p-4">Avg. Supply APR</th>
                   <th className="text-center p-4">Avg. Borrow APR</th>
+                  <th className="text-center p-4">Utilization Rate</th>
                   <th className="text-center p-4">Requirements</th>
                   <th className="text-center p-4">Eligibility</th>
                 </tr>
               </thead>
               <tbody>
                 {pools.map((pool) => {
-                  // Calculate average APR and APR
-                  const avgApy =
-                    pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apr?.replace("%", "") || "0"), 0) /
-                    pool.assets.length
+                  // Calculate average borrow APR only
                   const avgApr =
                     pool.assets.reduce((sum, asset) => sum + Number.parseFloat(asset.apr?.replace("%", "") || "0"), 0) /
                     pool.assets.length
@@ -361,8 +358,8 @@ export default function PoolsPage() {
                         )}
                       </td>
                       <td className="p-4 text-center">{pool.tvl}</td>
-                      <td className="p-4 text-center text-primary font-medium">{avgApy.toFixed(1)}%</td>
                       <td className="p-4 text-center text-yellow-500 font-medium">{avgApr.toFixed(1)}%</td>
+                      <td className="p-4 text-center">{pool.utilizationRate}</td>
                       <td className="p-4 text-center">
                         {pool.borrowerRequirements ? (
                           <div className="flex flex-col items-center gap-1">

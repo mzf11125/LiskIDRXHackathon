@@ -6,7 +6,6 @@ export type AssetType = {
 	icon?: string;
 	price: string;
 	apr?: string;
-	supplyApr?: string;
 	walletBalance?: string;
 	tokenAddress?: string; // Optional, for token-specific operations
 	units: number; // Number of decimal places for the asset
@@ -68,7 +67,6 @@ export type SupplyTransactionType = {
 	poolId: string;
 	asset: string;
 	amount: string;
-	supplyApr: string;
 	timestamp: string;
 	txHash?: string;
 	status: "pending" | "completed" | "failed";

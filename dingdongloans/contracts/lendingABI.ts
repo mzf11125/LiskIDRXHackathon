@@ -176,7 +176,7 @@ export const lendingABI = [
 			},
 			{
 				indexed: false,
-				internalType: "address",
+			internalType: "address",
 				name: "priceFeed",
 				type: "address",
 			},
@@ -372,7 +372,7 @@ export const lendingABI = [
 		inputs: [
 			{
 				indexed: false,
-				internalType: "address",
+			internalType: "address",
 				name: "account",
 				type: "address",
 			},
@@ -795,3 +795,31 @@ export const lendingABI = [
 		type: "function",
 	},
 ] as const;
+
+// Contract helper functions
+export const LENDING_CONTRACT_FUNCTIONS = {
+  // Read functions
+  GET_LOAN_INFO: "getLoanInfo",
+  GET_COLLATERAL_BALANCE: "getCollateralBalance",
+  GET_TOTAL_COLLATERAL_VALUE: "getTotalCollateralValueInDebtToken",
+  GET_COLLATERAL_RAISING_INFO: "getUserCollateralRaisingInfo",
+  GET_COLLATERAL_TOKENS: "getCollateralTokens",
+  
+  // Write functions
+  START_COLLATERAL_RAISING: "startCollateralRaising",
+  FUND_USER: "fundUser",
+  CLOSE_COLLATERAL_RAISING: "closeCollateralRaising",
+  TAKE_LOAN: "takeLoan",
+  REPAY_LOAN: "repayLoan",
+  DEPOSIT_COLLATERAL: "depositCollateral",
+  WITHDRAW_COLLATERAL: "withdrawCollateral",
+} as const;
+
+export const LENDING_CONTRACT_EVENTS = {
+  RAISING_COLLATERAL: "RaisingCollateral",
+  COLLATERAL_FUNDED: "CollateralFunded",
+  COLLATERAL_RAISING_CLOSED: "CollateralRaisingClosed",
+  BORROWED: "Borrowed",
+  REPAID: "Repaid",
+  LIQUIDATED: "Liquidated",
+} as const;

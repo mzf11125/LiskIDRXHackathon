@@ -6,6 +6,7 @@ import {
 	// useState, // No longer needed
 	type ReactNode,
 	useEffect,
+	useState,
 } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSignMessage, WagmiProvider, type Config } from "wagmi";
@@ -28,11 +29,13 @@ import { config } from "@/data/mock-data";
 const queryClient = new QueryClient();
 
 type WalletContextType = {
-	address: string | undefined; // Updated from string | null
+	address: string | undefined;
 	isConnected: boolean;
 	balance: string;
-	connect: () => Promise<void>; // Kept for interface, implementation changed
+	connect: () => Promise<void>;
 	disconnect: () => void;
+	isAuthenticated: boolean; // Add authentication status
+	authenticate: () => Promise<void>; // Add manual authentication
 };
 
 const WalletContext = createContext<WalletContextType>({
@@ -45,6 +48,8 @@ const WalletContext = createContext<WalletContextType>({
 		);
 	},
 	disconnect: () => { },
+	isAuthenticated: false,
+	authenticate: async () => { },
 });
 
 export const useWallet = () => useContext(WalletContext);
@@ -52,6 +57,7 @@ export const useWallet = () => useContext(WalletContext);
 // Inner component to handle context logic and wagmi hooks
 function WalletStateController({ children }: { children: ReactNode }) {
 	const { toast } = useToast();
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
 	const {
 		address: wagmiAddress,
@@ -69,25 +75,56 @@ function WalletStateController({ children }: { children: ReactNode }) {
 	const { open } = useConnectModal();
 
 	const baseUrl =
-		process.env.NEXT_PUBLIC_API_URL || "https://api.dingdong.loans";
+		process.env.NEXT_PUBLIC_API_URL;
+
+	// Check if user is already authenticated
+	useEffect(() => {
+		const token = localStorage.getItem("access_token");
+		setIsAuthenticated(!!token);
+
+		// Listen for token expiration events
+		const handleTokenExpired = () => {
+			setIsAuthenticated(false);
+			toast({
+				variant: "destructive",
+				title: "Session Expired",
+				description: "Please reconnect your wallet to continue.",
+			});
+		};
+
+		window.addEventListener('auth-token-expired', handleTokenExpired);
+		return () => window.removeEventListener('auth-token-expired', handleTokenExpired);
+	}, [toast]);
 
 	const signAuthMessage = async () => {
-		// Check if access token already exists
-		const existingToken = localStorage.getItem("access_token");
-		if (existingToken) {
-			console.log("Access token already exists");
-			return;
+		if (!address) {
+			console.error("No wallet address available for authentication");
+			throw new Error("No wallet address available");
 		}
+
 		try {
+			console.log("Starting authentication for address:", address);
+			
 			const response = await axios.post(
 				`${baseUrl}/auth/request-message`,
 				{
 					wallet_address: address,
+				},
+				{
+					timeout: 10000,
 				}
 			);
 
+			console.log("Message request response:", response.data);
 			const { message } = response.data;
+			
+			if (!message) {
+				throw new Error("No message received from server");
+			}
+
+			console.log("Requesting signature for message:", message);
 			const signature = await signMessageAsync({ message });
+			console.log("Signature received:", signature);
 
 			const signatureResponse = await axios.post(
 				`${baseUrl}/auth/verify`,
@@ -95,31 +132,94 @@ function WalletStateController({ children }: { children: ReactNode }) {
 					message: message,
 					signature: signature,
 					wallet_address: address,
+				},
+				{
+					timeout: 10000,
 				}
 			);
 
+			console.log("Verification response:", signatureResponse.data);
 			const { access_token } = signatureResponse.data;
-			console.log("Access token received:", access_token);
+			
+			if (!access_token) {
+				throw new Error("No access token received from server");
+			}
+
+			console.log("Access token received and stored");
 			localStorage.setItem("access_token", access_token);
-			console.log("Message signed successfully:", signature);
-		} catch (error) {
-			console.error("Error requesting or signing message:", error);
+			setIsAuthenticated(true);
+			
+			toast({
+				title: "Authentication successful",
+				description: "Your wallet has been authenticated.",
+			});
+
+			return access_token;
+		} catch (error: any) {
+			console.error("Error during authentication:", error);
+			setIsAuthenticated(false);
+			
+			let errorMessage = "Failed to authenticate wallet";
+			if (error.code === "ACTION_REJECTED" || error.code === "USER_REJECTED") {
+				errorMessage = "Authentication cancelled by user";
+			} else if (error.response?.status === 404) {
+				errorMessage = "Authentication service not available";
+			} else if (error.code === "NETWORK_ERROR" || error.name === "NetworkError") {
+				errorMessage = "Network error during authentication";
+			} else if (error.message) {
+				errorMessage = error.message;
+			}
+
 			toast({
 				variant: "destructive",
-				title: "Error",
-				description: "Failed to authenticate wallet",
+				title: "Authentication Error",
+				description: errorMessage,
 			});
+
+			throw error;
 		}
 	};
 
+	// Manual authentication function
+	const authenticate = async () => {
+		if (!address) {
+			toast({
+				variant: "destructive",
+				title: "Wallet not connected",
+				description: "Please connect your wallet first.",
+			});
+			return;
+		}
+
+		try {
+			await signAuthMessage();
+		} catch (error) {
+			console.error("Manual authentication failed:", error);
+		}
+	};
+
+	// Auto-authenticate when wallet connects
 	useEffect(() => {
-		if (wagmiStatus === "connected") {
+		if (wagmiStatus === "connected" && address) {
 			console.log("Wallet connected successfully via wagmi:", address);
-			signAuthMessage();
+			
+			// Check if we already have a token for this address
+			const existingToken = localStorage.getItem("access_token");
+			if (!existingToken) {
+				// Add a small delay to ensure the connection is fully established
+				setTimeout(() => {
+					signAuthMessage().catch(console.error);
+				}, 1000);
+			} else {
+				setIsAuthenticated(true);
+			}
 		} else if (wagmiStatus === "disconnected") {
 			console.log("Wallet disconnected via wagmi");
+			// Clear authentication data on disconnect
+			localStorage.removeItem("access_token");
+			setIsAuthenticated(false);
 		}
-	}, [wagmiStatus, address, toast]);
+	}, [wagmiStatus, address]);
 
 	const connect = async () => {
 		console.warn(
@@ -136,6 +236,8 @@ function WalletStateController({ children }: { children: ReactNode }) {
 
 	const disconnect = () => {
 		wagmiDisconnect();
+		localStorage.removeItem("access_token");
+		setIsAuthenticated(false);
 		console.log("Wallet disconnect initiated via context");
 		toast({
 			title: "Wallet disconnected",
@@ -151,6 +253,8 @@ function WalletStateController({ children }: { children: ReactNode }) {
 				balance,
 				connect,
 				disconnect,
+				isAuthenticated,
+				authenticate,
 			}}
 		>
 			{children}

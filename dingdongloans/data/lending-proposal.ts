@@ -44,7 +44,7 @@ export const getLendingProposalById = async (
         updated_at: doc.updated_at,
         size: doc.size,
       })),
-      wallet_analysis: walletAnalysis, // Use API analysis
+      wallet_analysis: walletAnalysis,
       created_at: data.created_at,
       updated_at: data.updated_at,
       tags: data.tags,
@@ -59,28 +59,7 @@ export const createBusinessProposal = async (
   proposalData: Partial<BusinessProposal>
 ): Promise<BusinessProposal> => {
   try {
-    // Check if user has a complete profile first
-    const profile = await getUserProfile();
-    const requiredFields = [
-      "display_name",
-      "email",
-      "company_name",
-      "company_position",
-      "company_website",
-      "company_description",
-    ];
-    const missingFields = requiredFields.filter(
-      (field) => !profile[field as keyof typeof profile]
-    );
-
-    if (missingFields.length > 0) {
-      throw new Error(
-        `Please complete your profile first. Missing fields: ${missingFields.join(
-          ", "
-        )}`
-      );
-    }
-
+    // Profile validation is now handled in the form component before submission
     const { data } = await api.post("/proposals/", proposalData);
     return data;
   } catch (error) {

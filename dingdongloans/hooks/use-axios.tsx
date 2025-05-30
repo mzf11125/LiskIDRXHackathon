@@ -1,59 +1,77 @@
 "use client";
 
-import { useEffect } from "react";
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosError } from "axios";
 
-// Create a custom axios instance
+const baseURL = process.env.NEXT_PUBLIC_API_URL;
+
+// Create axios instance
 export const api: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL,
+  timeout: 10000,
 });
 
-export function useAxios() {
-  useEffect(() => {
-    // Add a request interceptor
-    const requestInterceptor = api.interceptors.request.use(
-      (config) => {
-        // Try to get the token from localStorage
-        const token = localStorage.getItem("access_token");
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-        // If token exists, add it to the headers
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+// Response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem("access_token");
+      // Trigger re-authentication if needed
+      window.dispatchEvent(new CustomEvent("auth-token-expired"));
+    }
+    return Promise.reject(error);
+  }
+);
 
-        return config;
+// Auto-update wallet profile function
+export const updateWalletProfile = async (address: string) => {
+  try {
+    const timestamp = Date.now();
+    const profileData = {
+      display_name: `Test User ${timestamp}`,
+      email: `testuser${timestamp}@example.com`,
+      bio: "Auto-generated profile for proposal creation",
+      avatar_url: "",
+      phone: "",
+      website: "https://example.com",
+      social_media: {
+        twitter: "",
+        linkedin: "",
+        telegram: ""
       },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    // Add a response interceptor
-    const responseInterceptor = api.interceptors.response.use(
-      (response) => {
-        return response;
-      },
-      (error) => {
-        // Handle common error responses
-        if (error.response?.status === 401) {
-          // Clear token and redirect to login if needed
-          localStorage.removeItem("access_token");
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    // Cleanup interceptors on unmount
-    return () => {
-      api.interceptors.request.eject(requestInterceptor);
-      api.interceptors.response.eject(responseInterceptor);
+      company_name: `Test Company ${timestamp}`,
+      company_position: "CEO",
+      company_website: "https://example.com",
+      company_description: "A test company for API integration testing",
     };
-  }, []);
 
-  return api;
-}
+    const response = await api.put("/profiles/me", profileData);
+    console.log(`✓ Profile updated successfully for ${address}`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`× Failed to update profile: ${error.message}`);
+    if (error.response) {
+      console.error(`× Response: ${error.response.data}`);
+    }
+    return null;
+  }
+};
 
-export default useAxios;
+export default api;
