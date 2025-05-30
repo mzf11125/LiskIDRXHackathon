@@ -1,6 +1,4 @@
 "use client"
-
-import { useState } from "react"
 import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -9,12 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
-import { useToast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Check, Info } from "lucide-react"
-import { pools, addUserDeposit, updateWalletBalance } from "@/data/mock-data"
 import { Check, Info } from "lucide-react"
 import { pools, addUserDeposit } from "@/data/mock-data"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -56,19 +51,15 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
   const selectedAsset = form.watch("asset")
   const amount = form.watch("amount")
 
-
   const currentAsset = allAssets.find(asset => asset.symbol === selectedAsset)
-  const depositValue = amount && currentAsset 
   const depositValue = amount && currentAsset 
     ? parseFloat(amount) * parseFloat(currentAsset.price.replace(/[^0-9.-]+/g, ""))
     : 0
 
-  const estimatedAnnualEarnings = amount && currentAsset
-  const estimatedAnnualEarnings = amount && currentAsset
+  const estimatedAnnualEarnings = amount && currentAsset && currentAsset.supplyApr
     ? parseFloat(amount) * (parseFloat(currentAsset.supplyApr.replace("%", "")) / 100)
     : 0
 
-  function onSubmit(values: FormValues) {
   function onSubmit(values: FormValues) {
     if (!isConfirmStep) {
       setIsConfirmStep(true)
@@ -79,8 +70,7 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
     const asset = allAssets.find(a => a.symbol === values.asset)
     if (!asset) return
 
-    const walletBalance = parseFloat(asset.walletBalance.replace(/,/g, ""))
-    const walletBalance = parseFloat(asset.walletBalance.replace(/,/g, ""))
+    const walletBalance = parseFloat(asset.walletBalance?.replace(/,/g, "") || "0")
     const depositAmount = parseFloat(values.amount)
 
     if (depositAmount > walletBalance) {
@@ -96,28 +86,12 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
     addUserDeposit({
       asset: values.asset,
       amount: values.amount,
-      apr: asset.supplyApr,
+      apy: asset.supplyApr || "0%",
     })
-
-    // Update wallet balance
-    updateWalletBalance(values.asset, depositAmount, true)
 
     toast({
       title: "Deposit successful!",
       description: `You have successfully deposited ${values.amount} ${values.asset} and started earning ${asset.supplyApr} APR.`,
-    })
-
-    onSuccess()
-    // Add the deposit (in a real app, this would be a blockchain transaction)
-    addUserDeposit({
-      asset: values.asset,
-      amount: values.amount,
-      apy: asset.supplyApr,
-    })
-
-    toast({
-      title: "Deposit successful!",
-      description: `You have successfully deposited ${values.amount} ${values.asset} and started earning ${asset.supplyApr} APY.`,
     })
 
     onSuccess()
@@ -197,22 +171,15 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                         type="button"
                         variant="outline"
                         onClick={() => {
-                        variant="outline"
-                        onClick={() => {
-                          if (currentAsset) {
-                            field.onChange(currentAsset.walletBalance.replace(/,/g, ""))
+                          if (currentAsset && currentAsset.walletBalance) {
                             field.onChange(currentAsset.walletBalance.replace(/,/g, ""))
                           }
                         }}
                         className="px-3 bg-slate-700 border-slate-600"
                       >
                         Max
-                      >
-                        Max
                       </Button>
                     </div>
-                    <FormDescription>
-                      Wallet balance: {currentAsset?.walletBalance || "0.00"} {selectedAsset}
                     <FormDescription>
                       Wallet balance: {currentAsset?.walletBalance || "0.00"} {selectedAsset}
                     </FormDescription>
@@ -232,7 +199,7 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                     </div>
                     
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Current APY</span>
+                      <span className="text-slate-400">Current APR</span>
                       <span className="font-bold text-primary">{currentAsset?.supplyApr}</span>
                     </div>
 
@@ -262,8 +229,6 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
           </>
         ) : (
           <div className="space-y-6">
-        ) : (
-          <div className="space-y-6">
             <div className="p-4 bg-green-950/30 border border-green-800/50 rounded-md">
               <div className="flex items-center gap-2 mb-2">
                 <Check className="h-5 w-5 text-green-500" />
@@ -288,7 +253,7 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                       ${depositValue.toFixed(2)}
                     </div>
 
-                    <div className="text-slate-400">APY:</div>
+                    <div className="text-slate-400">APR:</div>
                     <div className="font-medium text-right text-primary">
                       {currentAsset?.supplyApr}
                     </div>
@@ -313,11 +278,8 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
           {isConfirmStep ? (
             <>
               <Button type="button" variant="outline" onClick={() => setIsConfirmStep(false)}>
-              <Button type="button" variant="outline" onClick={() => setIsConfirmStep(false)}>
                 Back
               </Button>
-              <Button type="submit" className="web3-button">
-                Confirm Deposit
               <Button type="submit" className="web3-button">
                 Confirm Deposit
               </Button>
@@ -338,7 +300,6 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
           )}
         </div>
       </form>
-    </Form>
     </Form>
   )
 }

@@ -1,4 +1,4 @@
-import type { PoolType, BorrowerType, SupplyTransactionType, UserSupplyType } from "@/types/platform";
+import type { PoolType, BorrowerType, SupplyTransactionType, UserSupplyType, AssetType } from "@/types/platform";
 
 export const pools: PoolType[] = [
 	{
