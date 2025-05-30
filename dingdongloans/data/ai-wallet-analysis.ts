@@ -1,4 +1,8 @@
-import type { AIWalletAnalysis } from "@/types/wallet-analysis"
+import type {
+  AIWalletAnalysis,
+  APIWalletAnalysis,
+} from "@/types/wallet-analysis";
+import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
 
 export const aiWalletAnalysis: AIWalletAnalysis = {
   id: 4,
@@ -23,12 +27,14 @@ export const aiWalletAnalysis: AIWalletAnalysis = {
   },
   scoring_breakdown: [
     {
-      reason: "Wallet has both inbound (funding) and outbound (spending) transactions.",
+      reason:
+        "Wallet has both inbound (funding) and outbound (spending) transactions.",
       criteria: "Inbound and outbound transactions",
       score_delta: 15.0,
     },
     {
-      reason: "Transaction amounts appear consistent, primarily involving 'approve' calls for the same token.",
+      reason:
+        "Transaction amounts appear consistent, primarily involving 'approve' calls for the same token.",
       criteria: "Transaction amounts are consistent or logically variable",
       score_delta: 10.0,
     },
@@ -39,7 +45,8 @@ export const aiWalletAnalysis: AIWalletAnalysis = {
       score_delta: -10.0,
     },
     {
-      reason: "There is a delay of more than 10 minutes between the first transaction and subsequent spending.",
+      reason:
+        "There is a delay of more than 10 minutes between the first transaction and subsequent spending.",
       criteria: "Delay before spending after funding",
       score_delta: 5.0,
     },
@@ -49,17 +56,20 @@ export const aiWalletAnalysis: AIWalletAnalysis = {
       score_delta: -10.0,
     },
     {
-      reason: "The contracts interacted with do not appear to be widely known or used.",
+      reason:
+        "The contracts interacted with do not appear to be widely known or used.",
       criteria: "Contracts are publicly known or widely used",
       score_delta: -5.0,
     },
     {
-      reason: "The wallet uses standard methods like 'approve' and a token transfer.",
+      reason:
+        "The wallet uses standard methods like 'approve' and a token transfer.",
       criteria: "Only standard methods are used",
       score_delta: 5.0,
     },
     {
-      reason: "Funding wallet information is not available to assess its status.",
+      reason:
+        "Funding wallet information is not available to assess its status.",
       criteria: "Funded by established or active wallets",
       score_delta: 0.0,
     },
@@ -99,7 +109,8 @@ export const aiWalletAnalysis: AIWalletAnalysis = {
       fee_usd: 0.0,
       fee_wei: 250981475063,
       to_name: "contract",
-      tx_hash: "0x9d48269e973cd2e60c17fd43db08c421a19eecaa3a8e5269490258b219f41e19",
+      tx_hash:
+        "0x9d48269e973cd2e60c17fd43db08c421a19eecaa3a8e5269490258b219f41e19",
       tx_type: ["contract_call", "token_transfer"],
       gas_used: 202364,
       from_name: "0x510DeD3072ac6967827A498360eDB0edf77BE542",
@@ -124,7 +135,8 @@ export const aiWalletAnalysis: AIWalletAnalysis = {
       fee_usd: 0.0,
       fee_wei: 74653618939,
       to_name: "contract",
-      tx_hash: "0x5b7cf551d233b981c998ec2866ff4738a8487df34a0546d3be40e87fca0d0968",
+      tx_hash:
+        "0x5b7cf551d233b981c998ec2866ff4738a8487df34a0546d3be40e87fca0d0968",
       tx_type: ["contract_call"],
       gas_used: 27027,
       from_name: "0x510DeD3072ac6967827A498360eDB0edf77BE542",
@@ -189,13 +201,55 @@ export const aiWalletAnalysis: AIWalletAnalysis = {
   comments: null,
   created_at: "2025-05-14T05:34:02.371171+00:00",
   updated_at: "2025-05-14T06:18:43.313177+00:00",
-}
+};
 
-export const getAIWalletAnalysis = (address: string): AIWalletAnalysis | undefined => {
-  // In a real application, this would fetch from an API based on the address
-  // For now, we'll just return our sample data if the address matches
-  if (address === aiWalletAnalysis.wallet_address) {
-    return aiWalletAnalysis
+export const getAIWalletAnalysis = async (
+  address: string
+): Promise<APIWalletAnalysis | undefined> => {
+  try {
+    // Fetch from API
+    const analysis = await getOrAnalyzeWallet(address);
+    return analysis;
+  } catch (error) {
+    console.error("Failed to fetch wallet analysis from API:", error);
+
+    // Fallback to mock data if API fails and address matches
+    if (address === aiWalletAnalysis.wallet_address) {
+      // Convert mock data to API format for backward compatibility
+      return {
+        id: aiWalletAnalysis.id,
+        wallet_address: aiWalletAnalysis.wallet_address,
+        network: aiWalletAnalysis.network,
+        analysis_timestamp: aiWalletAnalysis.analysis_timestamp,
+        final_score: aiWalletAnalysis.final_score,
+        risk_level: aiWalletAnalysis.risk_level,
+        wallet_metadata: {
+          age: `${aiWalletAnalysis.wallet_metadata.age_days} days`,
+          activity_level:
+            aiWalletAnalysis.wallet_metadata.total_transactions > 0
+              ? "active"
+              : "none",
+          transaction_count:
+            aiWalletAnalysis.wallet_metadata.total_transactions,
+          unique_interactions:
+            aiWalletAnalysis.wallet_metadata.unique_contracts_interacted,
+        },
+        scoring_breakdown: {
+          age_score: 0,
+          balance_score: 0,
+          activity_score: 0,
+          diversity_score: 0,
+        },
+        behavioral_patterns:
+          aiWalletAnalysis.behavioral_patterns.transaction_anomalies,
+        transactions: aiWalletAnalysis.transactions,
+        token_holdings: aiWalletAnalysis.token_holdings,
+        comments: aiWalletAnalysis.comments || [],
+        created_at: aiWalletAnalysis.created_at,
+        updated_at: aiWalletAnalysis.updated_at,
+      };
+    }
+
+    return undefined;
   }
-  return undefined
-}
+};
