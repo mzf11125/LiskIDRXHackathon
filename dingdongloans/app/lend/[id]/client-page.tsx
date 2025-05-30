@@ -52,9 +52,11 @@ import {
 	DialogTitle,
 	DialogFooter,
 } from "@/components/ui/dialog";
+import { getLendingProposalById } from "@/data/lending-proposal";
+import { AIWalletAnalysisComponent } from "@/components/ai-wallet-analysis";
 
 interface LendingOpportunityPageProps {
-	opportunity: any; // Replace with proper type
+	opportunity: any;
 }
 
 export default function LendingOpportunityPage({ opportunity }: LendingOpportunityPageProps) {
@@ -527,150 +529,10 @@ export default function LendingOpportunityPage({ opportunity }: LendingOpportuni
 						</TabsContent>
 
 						<TabsContent value="analysis" className="space-y-6">
-							{opportunity.wallet_analysis && (
-								<Card className="web3-card">
-									<CardHeader>
-										<CardTitle>Wallet Analysis</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<div className="space-y-6">
-											<div>
-												<h3 className="text-lg font-medium mb-2">
-													Scoring Breakdown
-												</h3>
-												<div className="space-y-2">
-													{opportunity.wallet_analysis.scoring_breakdown?.map(
-														(score: any, index: number) => (
-															<div
-																key={index}
-																className="bg-slate-800/50 p-4 rounded-lg"
-															>
-																<div className="flex justify-between mb-1">
-																	<span className="font-medium">
-																		{
-																			score.criteria
-																		}
-																	</span>
-																	<span
-																		className={
-																			score.score_delta >=
-																			0
-																				? "text-green-500"
-																				: "text-red-500"
-																		}
-																	>
-																		{score.score_delta >=
-																		0
-																			? "+"
-																			: ""}
-																		{
-																			score.score_delta
-																		}
-																	</span>
-																</div>
-																<p className="text-sm text-slate-400">
-																	{
-																		score.reason
-																	}
-																</p>
-															</div>
-														)
-													)}
-												</div>
-											</div>
-
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-												<div>
-													<h3 className="text-lg font-medium mb-2">
-														Wallet Metadata
-													</h3>
-													<div className="bg-slate-800/50 p-4 rounded-lg space-y-2">
-														<div className="flex justify-between">
-															<span className="text-slate-400">
-																First Seen
-															</span>
-															<span>
-																{formatDate(
-																	opportunity
-																		.wallet_analysis
-																		.wallet_metadata
-																		.first_seen
-																)}
-															</span>
-														</div>
-														<div className="flex justify-between">
-															<span className="text-slate-400">
-																Last Seen
-															</span>
-															<span>
-																{formatDate(
-																	opportunity
-																		.wallet_analysis
-																		.wallet_metadata
-																		.last_seen
-																)}
-															</span>
-														</div>
-														<div className="flex justify-between">
-															<span className="text-slate-400">
-																Total
-																Transactions
-															</span>
-															<span>
-																{
-																	opportunity
-																		.wallet_analysis
-																		.wallet_metadata
-																		.total_transactions
-																}
-															</span>
-														</div>
-													</div>
-												</div>
-
-												<div>
-													<h3 className="text-lg font-medium mb-2">
-														Behavioral Patterns
-													</h3>
-													<div className="bg-slate-800/50 p-4 rounded-lg space-y-2">
-														{opportunity
-															.wallet_analysis
-															.behavioral_patterns
-															?.transaction_anomalies
-															?.length > 0 && (
-															<div>
-																<p className="text-sm text-red-500 mb-1">
-																	Transaction
-																	Anomalies:
-																</p>
-																<ul className="list-disc list-inside space-y-1">
-																	{opportunity.wallet_analysis.behavioral_patterns.transaction_anomalies.map(
-																		(
-																			anomaly: string,
-																			index: number
-																		) => (
-																			<li
-																				key={
-																					index
-																				}
-																				className="text-sm text-slate-400"
-																			>
-																				{
-																					anomaly
-																				}
-																			</li>
-																		)
-																	)}
-																</ul>
-															</div>
-														)}
-													</div>
-												</div>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-							)}
+							<AIWalletAnalysisComponent 
+								analysis={opportunity.wallet_analysis}
+								loading={false}
+							/>
 						</TabsContent>
 					</Tabs>
 				</div>

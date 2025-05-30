@@ -28,7 +28,6 @@ export type ProposalData = {
   [key: string]: any
 }
 
-// Mock API for proposal management (in a real app, this would be integrated with a backend)
 const proposalsAPI = {
   getMyProposals: async (address: string): Promise<ProposalData[]> => {
     try {

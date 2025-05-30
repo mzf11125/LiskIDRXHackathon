@@ -10,13 +10,16 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { AIWalletAnalysis } from "@/types/wallet-analysis"
 
 interface AIWalletAnalysisComponentProps {
-  analysis: AIWalletAnalysis
+  analysis: AIWalletAnalysis | null
+  loading?: boolean
+  error?: string
 }
 
-export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponentProps) {
+export function AIWalletAnalysisComponent({ analysis, loading = false, error }: AIWalletAnalysisComponentProps) {
   const [activeTab, setActiveTab] = useState("overview")
 
   // Format date
@@ -97,6 +100,98 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
     }
   }
 
+  // Check if this is placeholder data or incomplete analysis
+  const isPlaceholderData = analysis && (
+    new Date(analysis.analysis_timestamp).getTime() > Date.now() - 60000 ||
+    analysis.final_score === 0 ||
+    analysis.risk_level === "unknown"
+  );
+
+  // Handle different scoring_breakdown formats
+  const getScoringBreakdown = () => {
+    if (!analysis?.scoring_breakdown) return [];
+    
+    if (Array.isArray(analysis.scoring_breakdown)) {
+      return analysis.scoring_breakdown;
+    }
+    
+    // Handle object format from API
+    const breakdown = analysis.scoring_breakdown as any;
+    return [
+      {
+        criteria: "Age Score",
+        score_delta: breakdown.age_score || 0,
+        reason: "Wallet age assessment"
+      },
+      {
+        criteria: "Balance Score", 
+        score_delta: breakdown.balance_score || 0,
+        reason: "Token balance assessment"
+      },
+      {
+        criteria: "Activity Score",
+        score_delta: breakdown.activity_score || 0,
+        reason: "Transaction activity assessment"
+      },
+      {
+        criteria: "Diversity Score",
+        score_delta: breakdown.diversity_score || 0,
+        reason: "Token and contract diversity assessment"
+      }
+    ];
+  };
+
+  // Handle different behavioral_patterns formats
+  const getBehavioralPatterns = () => {
+    if (!analysis?.behavioral_patterns) return {
+      outbound_only: false,
+      contract_usage: { single_contract_usage: false, unverified_contract_usage: false },
+      transaction_anomalies: []
+    };
+    
+    if (Array.isArray(analysis.behavioral_patterns)) {
+      return {
+        outbound_only: false,
+        contract_usage: { single_contract_usage: false, unverified_contract_usage: false },
+        transaction_anomalies: analysis.behavioral_patterns
+      };
+    }
+    
+    return analysis.behavioral_patterns;
+  };
+
+  if (loading) {
+    return (
+      <Card className="web3-card">
+        <CardHeader>
+          <CardTitle>AI Wallet Analysis</CardTitle>
+          <CardDescription>Loading wallet analysis...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error || !analysis) {
+    return (
+      <Card className="web3-card">
+        <CardHeader>
+          <CardTitle>AI Wallet Analysis</CardTitle>
+          <CardDescription>Unable to load wallet analysis</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-slate-400">{error || "No analysis data available"}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="web3-card">
       <CardHeader>
@@ -104,6 +199,16 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
         <CardDescription>
           Comprehensive analysis of wallet {analysis.wallet_address.slice(0, 6)}...{analysis.wallet_address.slice(-4)}
         </CardDescription>
+        {isPlaceholderData && (
+          <Alert className="bg-blue-500/10 border-blue-500/50 text-blue-400">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Demo Mode:</strong> {analysis.final_score === 0 || analysis.risk_level === "unknown" 
+                ? "Wallet analysis is being processed or no data available." 
+                : "Real wallet analysis data is not available."} This is a placeholder showing what the analysis would look like with actual blockchain data.
+            </AlertDescription>
+          </Alert>
+        )}
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -237,7 +342,7 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
               <h3 className="font-medium mb-2">Behavioral Patterns</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  {analysis.behavioral_patterns.outbound_only ? (
+                  {getBehavioralPatterns().outbound_only ? (
                     <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/50">
                       Outbound Only
                     </Badge>
@@ -247,24 +352,24 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                     </Badge>
                   )}
 
-                  {analysis.behavioral_patterns.contract_usage.single_contract_usage && (
+                  {getBehavioralPatterns().contract_usage?.single_contract_usage && (
                     <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/50">
                       Single Contract Usage
                     </Badge>
                   )}
 
-                  {analysis.behavioral_patterns.contract_usage.unverified_contract_usage && (
+                  {getBehavioralPatterns().contract_usage?.unverified_contract_usage && (
                     <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/50">
                       Unverified Contract Usage
                     </Badge>
                   )}
                 </div>
 
-                {analysis.behavioral_patterns.transaction_anomalies.length > 0 && (
+                {getBehavioralPatterns().transaction_anomalies.length > 0 && (
                   <div className="mt-2">
                     <p className="text-sm font-medium mb-1">Transaction Anomalies:</p>
                     <ul className="space-y-1">
-                      {analysis.behavioral_patterns.transaction_anomalies.map((anomaly, index) => (
+                      {getBehavioralPatterns().transaction_anomalies.map((anomaly, index) => (
                         <li key={index} className="text-sm flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
                           <span>{anomaly}</span>
@@ -274,7 +379,7 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                   </div>
                 )}
 
-                {analysis.behavioral_patterns.transaction_anomalies.length === 0 && (
+                {getBehavioralPatterns().transaction_anomalies.length === 0 && (
                   <p className="text-sm text-slate-400">No transaction anomalies detected.</p>
                 )}
               </div>
@@ -358,7 +463,7 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
               <h3 className="font-medium">Scoring Breakdown</h3>
 
               <div className="space-y-2">
-                {analysis.scoring_breakdown.map((item, index) => (
+                {getScoringBreakdown().map((item, index) => (
                   <div key={index} className="bg-slate-800/30 p-3 rounded-lg">
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-medium">{item.criteria}</span>

@@ -5,7 +5,7 @@ import axios, { AxiosInstance } from "axios";
 
 // Create a custom axios instance
 export const api: AxiosInstance = axios.create({
-	baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api",
+	baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dingdong.loans",
 	headers: {
 		"Content-Type": "application/json",
 	},

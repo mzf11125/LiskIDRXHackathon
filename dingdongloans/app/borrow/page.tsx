@@ -62,8 +62,6 @@ export default function BorrowPage() {
     loadProposals()
   }, [])
 
-  // Filter proposals to only show those from the current user
-  // In a real app, this would come from an API call
   const userProposals = proposals.filter(
     (proposal) => isConnected && address && proposal.proposer_wallet === address,
   )

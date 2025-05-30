@@ -6,6 +6,7 @@ import { getBusinessProposalById } from "@/data/business-proposals";
 import { BusinessProposal } from "@/types/business-proposal";
 import BusinessProposalClientPage from "./client-page";
 
+
 export default function Page() {
     const params = useParams();
     const [proposal, setProposal] = useState<BusinessProposal | null>(null);

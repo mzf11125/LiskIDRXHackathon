@@ -1,6 +1,7 @@
 import { BusinessProposal } from "@/types/business-proposal";
 import { api } from "@/hooks/use-axios";
-import { getAIWalletAnalysis } from "@/data/ai-wallet-analysis";
+import { getOrCreateWalletAnalysis } from "./wallet-analysis-api";
+import { createPlaceholderWalletAnalysis } from "@/types/wallet-analysis";
 
 export const getLendingProposalById = async (
     id: string
@@ -8,8 +9,17 @@ export const getLendingProposalById = async (
     try {
         const { data } = await api.get(`/proposals/${id}`);
         
-        // Generate wallet analysis on the client side
-        const walletAnalysis = getAIWalletAnalysis(data.proposer_wallet);
+        // Fetch wallet analysis using the new workflow
+        let walletAnalysis = null;
+        if (data.proposer_wallet) {
+            walletAnalysis = await getOrCreateWalletAnalysis(data.proposer_wallet);
+            
+            // If real analysis fails or is incomplete, use placeholder for demo
+            if (!walletAnalysis || walletAnalysis.final_score === 0) {
+                console.log("Real wallet analysis not available or incomplete, using placeholder data for demo");
+                walletAnalysis = createPlaceholderWalletAnalysis(data.proposer_wallet);
+            }
+        }
         
         return {
             id: data.id,
@@ -44,7 +54,7 @@ export const getLendingProposalById = async (
                 updated_at: doc.updated_at,
                 size: doc.size,
             })),
-            wallet_analysis: walletAnalysis, // Use client-side generated analysis
+            wallet_analysis: walletAnalysis,
             created_at: data.created_at,
             updated_at: data.updated_at,
             tags: data.tags,

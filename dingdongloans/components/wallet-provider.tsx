@@ -101,8 +101,7 @@ function WalletStateController({ children }: { children: ReactNode }) {
 
 	const { open } = useConnectModal();
 
-	const baseUrl =
-		process.env.NEXT_PUBLIC_API_URL || "https://api.dingdong.loans";
+	const baseUrl = "https://api.dingdong.loans";
 
 	const signAuthMessage = async () => {
 		// Check if access token already exists
