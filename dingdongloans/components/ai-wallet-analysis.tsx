@@ -82,9 +82,10 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
     if (delta < 0) return "text-red-500"
     return "text-slate-400"
   }
-
   // Get transaction status icon
-  const getTransactionStatusIcon = (status: string) => {
+  const getTransactionStatusIcon = (status: string | undefined) => {
+    if (!status) return <Info className="h-4 w-4 text-slate-400" />;
+
     switch (status.toLowerCase()) {
       case "ok":
         return <CheckCircle className="h-4 w-4 text-green-500" />
@@ -102,7 +103,7 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
       <CardHeader>
         <CardTitle>AI Wallet Analysis</CardTitle>
         <CardDescription>
-          Comprehensive analysis of wallet {analysis.wallet_address.slice(0, 6)}...{analysis.wallet_address.slice(-4)}
+          Comprehensive analysis of wallet {analysis.wallet_address ? `${analysis.wallet_address.slice(0, 6)}...${analysis.wallet_address.slice(-4)}` : 'Unknown'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -122,12 +123,11 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                   <Badge
                     variant="outline"
                     className={`
-                      ${
-                        analysis.risk_level.toLowerCase() === "low"
-                          ? "bg-green-500/20 text-green-500 border-green-500/50"
-                          : analysis.risk_level.toLowerCase() === "medium"
-                            ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
-                            : "bg-red-500/20 text-red-500 border-red-500/50"
+                      ${analysis.risk_level.toLowerCase() === "low"
+                        ? "bg-green-500/20 text-green-500 border-green-500/50"
+                        : analysis.risk_level.toLowerCase() === "medium"
+                          ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
+                          : "bg-red-500/20 text-red-500 border-red-500/50"
                       }
                     `}
                   >
@@ -327,12 +327,11 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                   <Badge
                     variant="outline"
                     className={`
-                      ${
-                        analysis.risk_level.toLowerCase() === "low"
-                          ? "bg-green-500/20 text-green-500 border-green-500/50"
-                          : analysis.risk_level.toLowerCase() === "medium"
-                            ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
-                            : "bg-red-500/20 text-red-500 border-red-500/50"
+                      ${analysis.risk_level.toLowerCase() === "low"
+                        ? "bg-green-500/20 text-green-500 border-green-500/50"
+                        : analysis.risk_level.toLowerCase() === "medium"
+                          ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
+                          : "bg-red-500/20 text-red-500 border-red-500/50"
                       }
                     `}
                   >
@@ -422,12 +421,11 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                               )}
                             </div>
                             <div className="text-xs text-slate-400 truncate">{formatDate(tx.timestamp)}</div>
-                          </div>
-                          <div className="text-right text-sm hidden md:block">
+                          </div>                          <div className="text-right text-sm hidden md:block">
                             <div className="truncate">
-                              To: {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
+                              To: {tx.to_address ? `${tx.to_address.slice(0, 6)}...${tx.to_address.slice(-4)}` : 'Unknown'}
                             </div>
-                            <div className="text-xs text-slate-400">{tx.tx_type.join(", ")}</div>
+                            <div className="text-xs text-slate-400">{tx.tx_type?.join(", ") || ''}</div>
                           </div>
                         </div>
                       </AccordionTrigger>
@@ -436,9 +434,8 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
                               <div className="flex justify-between text-sm">
-                                <span className="text-slate-400">Transaction Hash</span>
-                                <span className="font-mono">
-                                  {tx.tx_hash.slice(0, 10)}...{tx.tx_hash.slice(-8)}
+                                <span className="text-slate-400">Transaction Hash</span>                                <span className="font-mono">
+                                  {tx.tx_hash ? `${tx.tx_hash.slice(0, 10)}...${tx.tx_hash.slice(-8)}` : 'Unknown'}
                                 </span>
                               </div>
                               <div className="flex justify-between text-sm">
@@ -448,28 +445,24 @@ export function AIWalletAnalysisComponent({ analysis }: AIWalletAnalysisComponen
                               <div className="flex justify-between text-sm">
                                 <span className="text-slate-400">Method</span>
                                 <span>{tx.method}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-slate-400">Status</span>
-                                <span className={tx.status === "ok" ? "text-green-500" : "text-red-500"}>
-                                  {tx.status.toUpperCase()}
+                              </div>                              <div className="flex justify-between text-sm">
+                                <span className="text-slate-400">Status</span>                                <span className={!tx.status ? "text-slate-400" : tx.status === "ok" ? "text-green-500" : "text-red-500"}>
+                                  {tx.status ? tx.status.toUpperCase() : 'UNKNOWN'}
                                 </span>
                               </div>
                             </div>
 
                             <div className="space-y-1">
                               <div className="flex justify-between text-sm">
-                                <span className="text-slate-400">From</span>
-                                <span className="font-mono">
-                                  {tx.from_address.slice(0, 6)}...{tx.from_address.slice(-4)}
+                                <span className="text-slate-400">From</span>                                <span className="font-mono">
+                                  {tx.from_address ? `${tx.from_address.slice(0, 6)}...${tx.from_address.slice(-4)}` : 'Unknown'}
                                 </span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-slate-400">To</span>
-                                <div className="flex items-center gap-1">
-                                  <span className="font-mono">
-                                    {tx.to_address.slice(0, 6)}...{tx.to_address.slice(-4)}
-                                  </span>
+                                <div className="flex items-center gap-1">                                  <span className="font-mono">
+                                  {tx.to_address ? `${tx.to_address.slice(0, 6)}...${tx.to_address.slice(-4)}` : 'Unknown'}
+                                </span>
                                   {tx.to_is_contract && (
                                     <TooltipProvider>
                                       <Tooltip>

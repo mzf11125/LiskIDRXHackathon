@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -24,7 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -51,6 +51,12 @@ import useAxios from "@/hooks/use-axios";
 import { checkProfileCompletion } from "@/data/business-proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { contractAddress, pools } from "@/data/mock-data";
+import { parseUnits } from "viem";
+import { lendingABI } from "@/contracts/lendingABI";
+import { decodeErrorResult } from "viem";
+import { getTransactionError, getUserFriendlyError } from "@/lib/errorHandling";
+import { useWaitForTransactionReceipt, useWriteContract, useAccount } from "wagmi";
 
 const formSchema = z.object({
   company_name: z.string().min(2, {
@@ -181,7 +187,7 @@ export default function CreateProposalForm({
         ? new Date(initialData.deadline)
         : undefined,
       tags: initialData?.tags || [],
-    } as unknown as FormValues,
+    },
   });
 
   async function uploadDocuments(
@@ -210,6 +216,91 @@ export default function CreateProposalForm({
 
     await Promise.all(uploadPromises);
   }
+
+  const {
+    data: regularTxHash,
+    isPending: isRegularTxPending,
+    writeContractAsync: writeRegularTx,
+    error: regularTxError,
+  } = useWriteContract();
+
+  // Regular transaction confirmation
+  const {
+    isLoading: isRegularTxConfirming,
+    isSuccess: isRegularTxConfirmed,
+    isError: isRegularTxFailed,
+  } = useWaitForTransactionReceipt({
+    hash: regularTxHash,
+  });
+
+  const { address } = useAccount();
+
+  const handleStartCollateralRaising = async () => {
+    if (!address) return;
+
+    try {
+      const tokenAddress = getTokenAddressBySymbol(form.getValues("accepted_token"));
+      console.log(tokenAddress);
+      if (!tokenAddress) {
+        throw new Error("Invalid token address");
+      }
+
+      await writeRegularTx({
+        address: contractAddress,
+        abi: lendingABI,
+        functionName: "startCollateralRaising",
+        args: [
+          tokenAddress,
+          // IN BASIS POINTS 2 SO 10_000 IS 100%
+          // 100% = 10_000 BPS
+          // 1% = 100 BPS
+          parseUnits(form.getValues("target_funding"), 2),
+          Number(parseUnits(form.getValues("expected_return"), 2)),
+        ],
+      });
+    } catch (error) {
+      console.log(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const match = errorMessage.match(/data="([^"]+)"/);
+
+      if (match && match[1]) {
+        const parsedError = match[1].split(",")[0]; // Extract the first part separated by commas
+        try {
+          const decodedError = decodeErrorResult({
+            abi: lendingABI,
+            data: parsedError as `0x${string}`,
+          });
+
+          // Get user-friendly error message based on error name
+          const userMessage = getUserFriendlyError(decodedError.errorName);
+
+          console.error("Transaction failed:", {
+            errorName: decodedError.errorName,
+            args: decodedError.args,
+            userMessage,
+          });
+
+          toast({
+            variant: "destructive",
+            title: "Transaction Failed",
+            description: userMessage,
+            duration: 5000,
+          })
+
+          console.error("Error:", userMessage);
+        } catch (decodeError) {
+          console.error("Failed to decode contract error:", {
+            original: errorMessage,
+            parsed: parsedError,
+            decodeError,
+          });
+        }
+      } else {
+        // Handle non-contract errors (e.g. network errors, user rejected, etc)
+        console.error("Transaction failed:", getTransactionError(errorMessage));
+      }
+    }
+  };
 
   async function onSubmit(values: FormValues) {
     if (isSubmitting) return;
@@ -251,6 +342,12 @@ export default function CreateProposalForm({
 
       const createdProposal = response.data;
 
+
+      if (!createdProposal.id) {
+        throw new Error("Proposal creation failed, no ID returned.");
+      }
+
+
       // Upload documents if any
       if (documents.length > 0) {
         await uploadDocuments(createdProposal.id, documents);
@@ -258,7 +355,7 @@ export default function CreateProposalForm({
 
       // Verify creation/update by fetching the proposal
       await api.get(`/proposals/${createdProposal.id}`);
-
+      await handleStartCollateralRaising();
       toast({
         title: isEditing ? "Proposal Updated" : "Proposal Created",
         description: isEditing
@@ -272,9 +369,8 @@ export default function CreateProposalForm({
       console.error("Error submitting proposal:", error);
       toast({
         title: "Submission Failed",
-        description: `There was an error ${
-          isEditing ? "updating" : "creating"
-        } your proposal.`,
+        description: `There was an error ${isEditing ? "updating" : "creating"
+          } your proposal.`,
         variant: "destructive",
       });
     } finally {
@@ -530,11 +626,11 @@ export default function CreateProposalForm({
                               disabled={(date) =>
                                 date < new Date() ||
                                 date >
-                                  new Date(
-                                    new Date().setFullYear(
-                                      new Date().getFullYear() + 2
-                                    )
+                                new Date(
+                                  new Date().setFullYear(
+                                    new Date().getFullYear() + 2
                                   )
+                                )
                               }
                               initialFocus
                             />
@@ -905,8 +1001,8 @@ export default function CreateProposalForm({
                     ? "Updating..."
                     : "Creating..."
                   : isEditing
-                  ? "Update Proposal"
-                  : "Submit Proposal"}
+                    ? "Update Proposal"
+                    : "Submit Proposal"}
               </Button>
             </div>
           </form>
@@ -915,3 +1011,10 @@ export default function CreateProposalForm({
     </div>
   );
 }
+
+// Helper function to find token address by symbol
+const getTokenAddressBySymbol = (symbol: string): `0x${string}` | null => {
+  const asset = pools[0]?.assets.find(a => a.symbol === symbol);
+  if (!asset?.tokenAddress?.startsWith('0x')) return null;
+  return asset.tokenAddress as `0x${string}`;
+};

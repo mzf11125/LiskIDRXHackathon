@@ -23,9 +23,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/components/wallet-provider";
 import { useProfile } from "@/components/ui/use-profile";
+import { useAxios } from "@/hooks/useAxios";
 import { User, Building, Mail, Globe, Briefcase, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -342,8 +343,8 @@ export default function ProfilePage() {
                     {isSubmitting
                       ? "Saving..."
                       : profileExists
-                      ? "Update Profile"
-                      : "Create Profile"}
+                        ? "Update Profile"
+                        : "Create Profile"}
                   </Button>
                 </div>
               </form>

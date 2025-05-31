@@ -35,8 +35,7 @@ export default function WithdrawAssetForm({ onSuccess }: WithdrawAssetFormProps)
 
     // Get all withdrawable assets with their token addresses
     const depositedAssets = useMemo(() => {
-        return pools.flatMap((pool) => pool.assets)
-            .filter((asset) => userDeposits.some(deposit => deposit.asset === asset.symbol));
+        return pools[0].assets
     }, []);
 
     // Get the selected asset details
@@ -226,86 +225,89 @@ export default function WithdrawAssetForm({ onSuccess }: WithdrawAssetFormProps)
             console.error("Failed to complete withdrawal:", error);
             // Error handling is done in handleWithdraw
         }
-    }; const selectedDeposit = userDeposits.find(d => d.asset === selectedAsset);
+    };
+    const selectedDeposit = pools[0].assets.find(d => d.symbol === selectedAsset);
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {!isConfirmStep ? (
-                <>                    <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="asset">Select Asset</Label>
-                        <div className="flex items-center gap-4 mt-2">
-                            <div className="flex-1">
-                                <Select
-                                    value={selectedAsset}
-                                    onValueChange={setSelectedAsset}
-                                >
-                                    <SelectTrigger id="asset" className="bg-slate-800 border-slate-700">
-                                        <SelectValue placeholder="Select an asset to withdraw" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-slate-800 border-slate-700">
-                                        {userDeposits.map((deposit) => (
-                                            <SelectItem key={deposit.id} value={deposit.asset}>
-                                                {deposit.asset}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                <>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="asset">Select Asset</Label>
+                            <div className="flex items-center gap-4 mt-2">
+                                <div className="flex-1">
+                                    <Select
+                                        value={selectedAsset}
+                                        onValueChange={setSelectedAsset}
+                                    >
+                                        <SelectTrigger id="asset" className="bg-slate-800 border-slate-700">
+                                            <SelectValue placeholder="Select an asset to withdraw" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-slate-800 border-slate-700">
+                                            {pools[0].assets.map((deposit) => (
+                                                <SelectItem key={deposit.symbol} value={deposit.symbol}>
+                                                    {deposit.symbol}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
 
-                            {selectedAsset && (
-                                <div className="text-right">
-                                    <div className="font-medium">
-                                        {isLoadingBalance ? (
-                                            <div className="flex items-center">
-                                                <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                                                Loading...
-                                            </div>
-                                        ) : (
-                                            `${formattedBalance} ${selectedAsset}`
-                                        )}
+                                {selectedAsset && (
+                                    <div className="text-right">
+                                        <div className="font-medium">
+                                            {isLoadingBalance ? (
+                                                <div className="flex items-center">
+                                                    <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                                                    Loading...
+                                                </div>
+                                            ) : (
+                                                `${formattedBalance} ${selectedAsset}`
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-slate-400">Available balance</div>
                                     </div>
-                                    <div className="text-xs text-slate-400">Available balance</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="amount">Amount</Label>
+                            <div className="relative">
+                                <Input
+                                    id="amount"
+                                    type="number" placeholder="0.00"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    min="0"
+                                    max={formattedBalance}
+                                    step="0.000001"
+                                    className="bg-slate-800 border-slate-700"
+                                    required
+                                />
+                                {selectedAsset && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary"
+                                        onClick={() => setAmount(isLoadingBalance ? "0" : formattedBalance)}
+                                        disabled={isLoadingBalance}
+                                    >
+                                        MAX
+                                    </Button>
+                                )}
+                            </div>
+                            {selectedAsset && (
+                                <div className="flex justify-between text-sm text-slate-400">
+                                    <span>You can withdraw up to {isLoadingBalance ? "..." : formattedBalance} {selectedAsset}</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="amount">Amount</Label>
-                        <div className="relative">
-                            <Input
-                                id="amount"
-                                type="number" placeholder="0.00"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                min="0"
-                                max={formattedBalance}
-                                step="0.000001"
-                                className="bg-slate-800 border-slate-700"
-                                required
-                            />                                {selectedAsset && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary"
-                                    onClick={() => setAmount(isLoadingBalance ? "0" : formattedBalance)}
-                                    disabled={isLoadingBalance}
-                                >
-                                    MAX
-                                </Button>
-                            )}
-                        </div>
-                        {selectedAsset && (
-                            <div className="flex justify-between text-sm text-slate-400">
-                                <span>You can withdraw up to {isLoadingBalance ? "..." : formattedBalance} {selectedAsset}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                    {selectedDeposit && (
+                    {/* {selectedDeposit && (
                         <div className="rounded-lg bg-slate-800/50 p-4 space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-400">Current Value</span>
@@ -313,10 +315,9 @@ export default function WithdrawAssetForm({ onSuccess }: WithdrawAssetFormProps)
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-400">Earned Interest</span>
-                                <span className="text-green-500">+{selectedDeposit.earnedInterest}</span>
                             </div>
                         </div>
-                    )}
+                    )} */}
                 </>
             ) : (
                 <div className="space-y-6">
@@ -371,9 +372,6 @@ export default function WithdrawAssetForm({ onSuccess }: WithdrawAssetFormProps)
                                     </div>
 
                                     <div className="text-slate-400">Earned interest:</div>
-                                    <div className="font-medium text-right text-green-500">
-                                        +{selectedDeposit?.earnedInterest} {selectedAsset}
-                                    </div>
                                 </div>
                             </div>
                         </CardContent>

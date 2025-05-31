@@ -7,7 +7,7 @@ import {
 	type ReactNode,
 	useEffect,
 } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useSignMessage, WagmiProvider, type Config } from "wagmi";
 import { useAccount, useBalance, useDisconnect } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -69,7 +69,7 @@ function WalletStateController({ children }: { children: ReactNode }) {
 	const { open } = useConnectModal();
 
 	const baseUrl =
-		process.env.NEXT_PUBLIC_API_URL || "https://api.dingdong.loans";
+		process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 	const signAuthMessage = async () => {
 		// Check if access token already exists

@@ -129,26 +129,25 @@ export default function BusinessProposals() {
                   <Badge
                     variant="outline"
                     className={`
-                      ${
-                        proposal.wallet_analysis?.risk_level === "low"
-                          ? "bg-green-500/20 text-green-500 border-green-500/50"
-                          : proposal.wallet_analysis?.risk_level === "medium"
+                      ${proposal.wallet_analysis?.risk_level === "low"
+                        ? "bg-green-500/20 text-green-500 border-green-500/50"
+                        : proposal.wallet_analysis?.risk_level === "medium"
                           ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/50"
                           : proposal.wallet_analysis?.risk_level === "high"
-                          ? "bg-red-500/20 text-red-500 border-red-500/50"
-                          : "bg-gray-500/20 text-gray-500 border-gray-500/50"
+                            ? "bg-red-500/20 text-red-500 border-red-500/50"
+                            : "bg-gray-500/20 text-gray-500 border-gray-500/50"
                       }
                     `}
                   >
                     {proposal.wallet_analysis?.risk_level === "unknown"
                       ? "Unknown Risk"
                       : (proposal.wallet_analysis?.risk_level || "unknown")
-                          .charAt(0)
-                          .toUpperCase() +
-                        (
-                          proposal.wallet_analysis?.risk_level || "unknown"
-                        ).slice(1) +
-                        " Risk"}
+                        .charAt(0)
+                        .toUpperCase() +
+                      (
+                        proposal.wallet_analysis?.risk_level || "unknown"
+                      ).slice(1) +
+                      " Risk"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3">
@@ -187,7 +186,7 @@ export default function BusinessProposals() {
                       <TrendingUp className="h-3 w-3" /> Return
                     </div>
                     <p className="text-sm font-medium gradient-text">
-                      {proposal.expected_return}
+                      {proposal.expected_return}%
                     </p>
                   </div>
                   <div className="text-center">

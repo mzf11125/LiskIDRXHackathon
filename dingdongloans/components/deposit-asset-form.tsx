@@ -20,6 +20,7 @@ import { erc20Abi, parseUnits, formatUnits, decodeErrorResult } from 'viem'
 import { waitForTransactionReceipt } from "@wagmi/core";
 import { AssetType } from "@/types/platform"
 import { getUserFriendlyError, getTransactionError } from "@/lib/errorHandling"
+import { pricefeedABI } from "@/contracts/pricefeedABI"
 
 const formSchema = z.object({
   asset: z.string({
@@ -45,13 +46,7 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
   const { address } = useAccount()
 
   // Memoize all assets to prevent unnecessary recalculations
-  const allAssets = useMemo(() =>
-    pools.flatMap((pool) => pool.assets)
-      .filter((asset, index, self) =>
-        index === self.findIndex((a) => a.symbol === asset.symbol) && asset.supplyEnabled
-      ),
-    [] // pools is imported from mock-data and doesn't change
-  )
+  const allAssets = pools[0].assets;
   // Read all token balances in one call
   const { data: balanceResults } = useReadContracts({
     contracts: allAssets
@@ -63,6 +58,11 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
         args: [address as `0x${string}`],
       })),
   })
+
+
+  useEffect(() => {
+    console.log(balanceResults);
+  }, [balanceResults])
 
   // Update balances when contract results change
   useEffect(() => {
@@ -97,16 +97,44 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
     },
   })
 
+  const { data: priceData } = useReadContracts({
+    contracts: allAssets
+      .filter(token => token.tokenAddress && token.tokenAddress.startsWith('0x'))
+      .map((token) => ({
+        address: token.priceFeed as `0x${string}`,
+        abi: pricefeedABI as any,
+        functionName: 'latestAnswer',
+      })),
+    query: {
+      refetchInterval: 10000, // Refetch every 5 seconds
+    }
+  })
+
+  // Format token prices from priceData
+  const formattedPrices = useMemo(() => {
+    const priceMap: Record<string, number> = {};
+    allAssets.forEach((asset, index) => {
+      if (asset.tokenAddress?.startsWith('0x')) {
+        priceMap[asset.symbol] = priceData?.[index]?.result ?
+          Number(priceData[index].result) / 1e8 :
+          parseFloat(asset.price.replace(/[^0-9.-]+/g, ""));
+      }
+    });
+    return priceMap;
+  }, [priceData, allAssets]);
+
   const selectedAsset = form.watch("asset")
   const amount = form.watch("amount")
   const currentAsset = allAssets.find(asset => asset.symbol === selectedAsset)
-  const depositValue = amount && currentAsset && currentAsset.price
-    ? parseFloat(amount) * parseFloat(currentAsset.price.replace(/[^0-9.-]+/g, ""))
-    : 0
+  const depositValue = useMemo(() => {
+    if (!amount || !currentAsset || !formattedPrices[selectedAsset]) return 0;
+    return parseFloat(amount) * formattedPrices[selectedAsset];
+  }, [amount, currentAsset, selectedAsset, formattedPrices]);
 
-  const estimatedAnnualEarnings = amount && currentAsset && currentAsset.supplyApr
-    ? parseFloat(amount) * (parseFloat(currentAsset.supplyApr.replace("%", "")) / 100)
-    : 0
+  const estimatedAnnualEarnings = useMemo(() => {
+    if (!amount || !currentAsset || !currentAsset.supplyApr) return 0;
+    return parseFloat(amount) * (parseFloat(currentAsset.supplyApr.replace("%", "")) / 100);
+  }, [amount, currentAsset]);
 
   // Get the current wallet balance for the selected asset
   const currentWalletBalance = selectedAsset && assetBalances[selectedAsset]
@@ -376,10 +404,9 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription>
+                    {/* <FormDescription>
                       {selectedAsset && (
                         <div className="flex items-center gap-2">
-                          <span>Earn {currentAsset?.supplyApr} APY</span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -392,7 +419,7 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                           </TooltipProvider>
                         </div>
                       )}
-                    </FormDescription>
+                    </FormDescription> */}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -455,32 +482,25 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Deposit Value</span>
-                      <span className="font-bold">${depositValue.toFixed(2)}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Current APY</span>
-                      <span className="font-bold text-primary">{currentAsset?.supplyApr}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400">Estimated Annual Earnings</span>
-                      <span className="font-bold text-green-500">
-                        {estimatedAnnualEarnings.toFixed(2)} {selectedAsset}
+                      <span className="font-bold">
+                        ${depositValue.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
+                        {!priceData ? " (Loading...)" : ""}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Collateral Factor</span>
-                      <span className="font-bold">{currentAsset?.collateralFactor}</span>
+                      <span className="font-bold">70%</span>
                     </div>
 
                     <Separator className="bg-slate-700" />
 
                     <div className="text-xs text-slate-400 space-y-1">
-                      <p>• Interest is calculated and distributed daily</p>
                       <p>• You can withdraw your deposit at any time</p>
-                      <p>• This asset can be used as collateral for borrowing</p>
+                      <p>• This asset can be used as collateral for borrowing and comunity lending</p>
                     </div>
                   </div>
                 </CardContent>
@@ -543,25 +563,21 @@ export default function DepositAssetForm({ onSuccess, preselectedAsset }: Deposi
 
                   <div className="text-slate-400">Deposit value:</div>
                   <div className="font-medium text-right">
-                    ${depositValue.toFixed(2)}
+                    ${depositValue.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                    {!priceData ? " (Loading...)" : ""}
                   </div>
 
-                  <div className="text-slate-400">APY:</div>
-                  <div className="font-medium text-right text-primary">
-                    {currentAsset?.supplyApr}
-                  </div>
 
-                  <div className="text-slate-400">Estimated annual earnings:</div>
-                  <div className="font-medium text-right text-green-500">
-                    {estimatedAnnualEarnings.toFixed(2)} {selectedAsset}
-                  </div>
 
                   <div className="text-slate-400">Can be used as collateral:</div>
                   <div className="font-medium text-right">
-                    Up to {currentAsset?.collateralFactor} of value
+                    Up to 70% of value
                   </div>
                 </div>
-                
+
               </div>
             </CardContent>
           </Card>

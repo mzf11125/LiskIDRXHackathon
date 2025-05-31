@@ -20,7 +20,12 @@ import {
   FileText,
   Edit,
   Trash2,
+  Plus,
 } from "lucide-react";
+import { useAccount, useReadContract } from "wagmi";
+import { lendingABI } from "@/contracts/lendingABI";
+import { contractAddress } from "@/data/mock-data";
+import { formatUnits } from "viem";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -44,6 +49,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import RepayLoanForm from "@/components/repay-loan-form";
 import {
   fetchBusinessProposals,
   getUserProposals,
@@ -57,7 +63,7 @@ import { checkProfileCompletion } from "@/data/business-proposals";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { User, AlertTriangle } from "lucide-react";
 import useAxios from "@/hooks/use-axios";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export default function BorrowPage() {
   const { isConnected, connect, address } = useWallet();
@@ -65,6 +71,54 @@ export default function BorrowPage() {
   const router = useRouter();
   const { toast } = useToast();
   const api = useAxios();
+
+  // Add hooks for contract data
+  const { data: totalCollateralValue } = useReadContract({
+    address: contractAddress as `0x${string}`,
+    abi: lendingABI,
+    functionName: "getTotalCollateralValueInDebtToken",
+    args: address ? [address as `0x${string}`] : undefined,
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000, // Refetch every 5 seconds
+    },
+  });
+
+  const { data: loanInfo } = useReadContract({
+    address: contractAddress as `0x${string}`,
+    abi: lendingABI,
+    functionName: "getLoanInfo",
+    args: address ? [address as `0x${string}`] : undefined,
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000, // Refetch every 5 seconds
+    },
+    account: address ? (address as `0x${string}`) : undefined
+  });
+
+  const calculateHealthFactorBps = () => {
+    if (!totalCollateralValue || !loanInfo) return null;
+
+    const collateralValue = totalCollateralValue;
+    const debtValue = loanInfo.debt - loanInfo.repaid;
+
+    if (debtValue === 0n) return 0;
+
+    // Apply LTV to collateral first (10000 is BPS_DENOMINATOR from contract)
+    const riskAdjustedCollateral = (collateralValue * BigInt(7000)) / BigInt(10000);
+
+    // Then calculate health factor
+    const healthFactorBps = (riskAdjustedCollateral * BigInt(10000)) / BigInt(debtValue);
+
+    return Number(healthFactorBps);
+  };
+
+  const healthFactor = calculateHealthFactorBps();
+  const healthFactorPercentage = !healthFactor
+    ? "No Active Loans"
+    : (healthFactor / 100).toFixed(2);
+
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false);
@@ -82,6 +136,7 @@ export default function BorrowPage() {
   });
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false);
+  const [isRepayDialogOpen, setIsRepayDialogOpen] = useState(false);
 
   useEffect(() => {
     const loadProposals = async () => {
@@ -317,13 +372,14 @@ export default function BorrowPage() {
                   <Card className="bg-slate-800 border-slate-700">
                     <CardHeader className="pb-2">
                       <CardDescription className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" /> Available to
-                        Borrow
+                        <DollarSign className="h-4 w-4 mr-1" /> Total Debt:
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="text-xl font-bold gradient-text">
-                        $25,000.00
+                        {loanInfo ?
+                          `${Number(formatUnits(loanInfo.debt - loanInfo.repaid, 2))} IDRX`
+                          : "0 IDRX"}
                       </div>
                     </CardContent>
                   </Card>
@@ -335,95 +391,22 @@ export default function BorrowPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-xl font-bold gradient-text">
-                        $10,000.00
+                        {totalCollateralValue && `${formatUnits(totalCollateralValue, 2)} IDRX`}
                       </div>
                     </CardContent>
                   </Card>
                   <Card className="bg-slate-800 border-slate-700">
                     <CardHeader className="pb-2">
                       <CardDescription className="flex items-center">
-                        <Percent className="h-4 w-4 mr-1" /> Current Ratio
+                        <Plus className="h-4 w-4 mr-1" /> Health Factor
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="text-xl font-bold gradient-text">
-                        200%
+                        {healthFactorPercentage}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-3 gradient-text">
-                    Your Active Loans
-                  </h3>
-                  {[1, 2].map((index) => (
-                    <Card
-                      key={index}
-                      className="bg-slate-800 border-slate-700 mb-4"
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                              <Image
-                                src={`/placeholder.svg?height=40&width=40`}
-                                alt="BTC"
-                                width={40}
-                                height={40}
-                              />
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {index === 1 ? "2.5 BTC" : "50 ETH"}
-                              </div>
-                              <div className="text-sm text-slate-400">
-                                Borrowed on{" "}
-                                {index === 1
-                                  ? "May 10, 2025"
-                                  : "April 25, 2025"}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div>
-                              <div className="text-xs text-slate-400">
-                                Collateral
-                              </div>
-                              <div className="font-medium">
-                                {index === 1 ? "100,000 IDRX" : "75 BTC"}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-slate-400">
-                                Interest Rate
-                              </div>
-                              <div className="font-medium">
-                                {index === 1 ? "3.5%" : "2.8%"} APR
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-slate-400">
-                                Health
-                              </div>
-                              <div className="font-medium text-green-500">
-                                Healthy
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-slate-700 border-slate-600"
-                            >
-                              Manage <ChevronRight className="ml-1 h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
@@ -456,6 +439,31 @@ export default function BorrowPage() {
                   </Dialog>
 
                   <Dialog
+                    open={isRepayDialogOpen}
+                    onOpenChange={setIsRepayDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button className="web3-button">
+                        <DollarSign className="mr-2 h-4 w-4" /> Repay Loan
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent
+                      className="web3-card sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+                      style={{ position: "fixed" }}
+                    >
+                      <DialogHeader>
+                        <DialogTitle className="gradient-text text-xl">
+                          Repay Cryptocurrency Loan
+                        </DialogTitle>
+                        <DialogDescription>
+                          Repay your outstanding loan and reduce your debt position.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <RepayLoanForm onSuccess={() => setIsRepayDialogOpen(false)} />
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog
                     open={isAnalyticsDialogOpen}
                     onOpenChange={setIsAnalyticsDialogOpen}
                   >
@@ -483,13 +491,6 @@ export default function BorrowPage() {
                       <WalletAnalytics />
                     </DialogContent>
                   </Dialog>
-
-                  <Button
-                    variant="outline"
-                    className="bg-slate-800 border-slate-700"
-                  >
-                    <FileText className="mr-2 h-4 w-4" /> Loan History
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -529,9 +530,9 @@ export default function BorrowPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{asset.apr}</div>
+                        <div className="font-medium">2%</div>
                         <div className="text-xs text-slate-400">
-                          Variable APR
+                          Fixed APR
                         </div>
                       </div>
                     </div>
@@ -600,7 +601,7 @@ export default function BorrowPage() {
 
             <TabsContent value="active" className="space-y-6">
               {filteredProposals.filter((p) => p.status === "active").length >
-              0 ? (
+                0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProposals
                     .filter((p) => p.status === "active")
@@ -717,28 +718,26 @@ export default function BorrowPage() {
                             </div>
                           </div>
                         </CardContent>
-                        <CardFooter>
-                          <div className="flex items-center">
+                        <CardFooter className="flex flex-col gap-3">
+                          <div className="flex justify-between w-full gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="bg-slate-700 border-slate-600 mr-2"
+                              className="bg-slate-800 border-slate-700 flex-1"
                               onClick={() => handleEditProposal(proposal)}
                             >
                               <Edit className="mr-1 h-4 w-4" /> Edit
                             </Button>
                             <Button
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
+                              className="bg-red-900/20 border-red-800/30 hover:bg-red-900/40 text-red-400 flex-1"
                               onClick={() => handleDeleteProposal(proposal.id)}
                             >
                               <Trash2 className="mr-1 h-4 w-4" /> Delete
                             </Button>
                           </div>
-                          <Link
-                            href={`/borrow/${proposal.id}`}
-                            className="w-full"
-                          >
+                          <Link href={`/borrow/${proposal.id}`} className="w-full">
                             <Button className="w-full web3-button group">
                               View Details{" "}
                               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -770,7 +769,7 @@ export default function BorrowPage() {
 
             <TabsContent value="funded" className="space-y-6">
               {filteredProposals.filter((p) => p.status === "funded").length >
-              0 ? (
+                0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProposals
                     .filter((p) => p.status === "funded")
@@ -979,7 +978,7 @@ export default function BorrowPage() {
                             </div>
                           </div>
                         </CardContent>
-                        <CardFooter>
+                        <CardFooter className="flex w-full gap-3">
                           <Link
                             href={`/borrow/${proposal.id}`}
                             className="w-full"
@@ -1033,6 +1032,21 @@ export default function BorrowPage() {
               proposalId={editingProposal.id}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Repay Loan Dialog */}
+      <Dialog open={isRepayDialogOpen} onOpenChange={setIsRepayDialogOpen}>
+        <DialogContent className="web3-card sm:max-w-[600px] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="gradient-text text-xl">
+              Repay Loan
+            </DialogTitle>
+            <DialogDescription>
+              Repay your outstanding loan amount.
+            </DialogDescription>
+          </DialogHeader>
+          <RepayLoanForm onSuccess={() => setIsRepayDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>

@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface PoolDetailClientProps {
 	params: { id: string };
@@ -462,10 +462,10 @@ export default function PoolDetailClient({
 												)}
 												{pool.riskLevel ===
 													"medium" && (
-													<span className="text-yellow-500">
-														Medium
-													</span>
-												)}
+														<span className="text-yellow-500">
+															Medium
+														</span>
+													)}
 												{pool.riskLevel === "high" && (
 													<span className="text-red-500">
 														High
@@ -988,15 +988,15 @@ export default function PoolDetailClient({
 									</span>
 									<span className="text-green-500">
 										{supplyAmount &&
-										!isNaN(Number.parseFloat(supplyAmount))
+											!isNaN(Number.parseFloat(supplyAmount))
 											? (
-													Number.parseFloat(supplyAmount) *
-													(Number.parseFloat(
-														selectedAsset?.supplyApr?.replace(
-															"%", ""
-														) || "0"
-													) / 100)
-											  ).toFixed(2)
+												Number.parseFloat(supplyAmount) *
+												(Number.parseFloat(
+													selectedAsset?.supplyApr?.replace(
+														"%", ""
+													) || "0"
+												) / 100)
+											).toFixed(2)
 											: "0.00"}{" "}
 										{selectedAsset?.symbol}
 									</span>

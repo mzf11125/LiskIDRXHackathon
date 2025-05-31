@@ -8,8 +8,9 @@ export type AssetType = {
 	apr?: string;
 	supplyApr?: string;
 	walletBalance?: string;
-	tokenAddress?: string; // Optional, for token-specific operations
-	units: number; // Number of decimal places for the asset
+	tokenAddress?: string;
+	priceFeed?: string; // Address of the price feed contract
+	units: number;
 	available?: string;
 	supplied?: string;
 	collateralFactor?: string;

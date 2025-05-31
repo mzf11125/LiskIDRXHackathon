@@ -1,9 +1,15 @@
 // Client Component - handles interactivity (this should be in a separate file: client-page.tsx)
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useWallet } from "@/components/wallet-provider";
+import { useToast } from "@/hooks/use-toast";
+import { contractAddress, config, pools } from "@/data/mock-data";
+import { lendingABI } from "@/contracts/lendingABI";
+import { parseUnits, formatUnits } from "viem";
+import { useWaitForTransactionReceipt, useWriteContract, useReadContract } from "wagmi";
 import {
   ArrowLeft,
   ExternalLink,
@@ -14,6 +20,9 @@ import {
   Wallet,
   AlertTriangle,
   CheckCircle,
+  Loader2,
+  AlertCircle,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,13 +34,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useWallet } from "@/components/wallet-provider";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import {
   Accordion,
   AccordionContent,
@@ -52,10 +59,77 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import WalletAnalytics from "@/components/wallet-analytics";
+import { AIWalletAnalysisComponent } from "@/components/ai-wallet-analysis";
+import { getTransactionError, getUserFriendlyError } from "@/lib/errorHandling";
+import { decodeErrorResult } from "viem";
+
+// Constants for token standards
+import { erc20Abi } from "viem";
+import { waitForTransactionReceipt } from "@wagmi/core";
+
+// Helper function to get token address by symbol
+const getTokenAddressBySymbol = (symbol: string): `0x${string}` | null => {
+  const asset = pools[0]?.assets.find((a) => a.symbol === symbol);
+  if (!asset?.tokenAddress?.startsWith("0x")) return null;
+  return asset.tokenAddress as `0x${string}`;
+};
 
 interface LendingOpportunityPageProps {
   opportunity: any; // Replace with proper type
 }
+interface ProcessedFunderInfo {
+  address: `0x${string}`;
+  amount: bigint;
+  reward: bigint;
+}
+
+interface ProcessedCollateralRaisingInfo {
+  isOpen: boolean;
+  collateralToken: `0x${string}`;
+  target: bigint;
+  raised: bigint;
+  interestRateInBPS: bigint;
+  funders: ProcessedFunderInfo[];
+}
+
+function processCollateralRaisingInfo(
+  data: CollateralRaisingInfo | undefined
+): ProcessedCollateralRaisingInfo | undefined {
+  if (!data) return undefined;
+
+  // Process each funder info to convert from tuple to object
+  const typedFunderInfo = data[6].map((funder, index) => ({
+    address: data[5][index],
+    amount: funder.amount,
+    reward: funder.reward,
+  }));
+
+  // Return a properly typed object for easier access
+  return {
+    isOpen: data[0],
+    collateralToken: data[1],
+    target: data[2],
+    raised: data[3],
+    interestRateInBPS: data[4],
+    funders: typedFunderInfo,
+  };
+}
+
+export type FunderInfo = readonly [amount: bigint, reward: bigint];
+
+export type CollateralRaisingInfo = readonly [
+  isOpen: boolean,
+  collateralToken: `0x${string}`,
+  target: bigint,
+  raised: bigint,
+  interestRateInBPS: bigint,
+  funders: readonly `0x${string}`[],
+  funderInfo: FunderInfo[]
+];
+
+export type Loan = readonly [debt: bigint, repaid: bigint, dueDate: bigint];
+
 
 export default function LendingOpportunityPage({
   opportunity,
@@ -68,8 +142,49 @@ export default function LendingOpportunityPage({
   const [activeTab, setActiveTab] = useState("overview");
   const [lendAmount, setLendAmount] = useState("");
   const [isLendDialogOpen, setIsLendDialogOpen] = useState(false);
-  const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] =
-    useState(false);
+  const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
+  const [isTransactionInProgress, setIsTransactionInProgress] = useState(false);
+  const [isTransactionSuccess, setIsTransactionSuccess] = useState(false);
+  const [isTransactionFailed, setIsTransactionFailed] = useState(false);
+  const [transactionError, setTransactionError] = useState<string | null>(null);
+  const [currentInvestorCount, setCurrentInvestorCount] = useState(0);
+  const [currentFundingAmount, setCurrentFundingAmount] = useState("0");
+
+  // Get collateral raising info
+  const {
+    data: collateralRaisingInfoData,
+    isLoading: isCollateralRaisingInfoDataLoading,
+    error: collateralRaisingInfoError,
+  } = useReadContract({
+    address: contractAddress,
+    abi: lendingABI,
+    functionName: "getUserCollateralRaisingInfo",
+    args: [opportunity.proposer_wallet as `0x${string}`],
+    account: opportunity.proposer_wallet as `0x${string}`,
+    query: {
+      enabled: !!opportunity.proposer_wallet && !!contractAddress,
+    },
+  });
+
+  // Process the collateral raising data into a more usable object
+  const [processedRaisingInfo, setProcessedRaisingInfo] = useState<
+    ProcessedCollateralRaisingInfo | undefined
+  >(undefined);
+
+  // Update processed raising info when data changes
+  useEffect(() => {
+    const processed = processCollateralRaisingInfo(
+      collateralRaisingInfoData as unknown as CollateralRaisingInfo
+    );
+    setProcessedRaisingInfo(processed);
+
+    if (processed) {
+      // Update investor count and current funding
+      setCurrentInvestorCount(processed.funders.length);
+      const totalRaised = parseFloat(formatUnits(processed.raised, 2));
+      setCurrentFundingAmount(totalRaised.toString());
+    }
+  }, [collateralRaisingInfoData]);
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -141,14 +256,163 @@ export default function LendingOpportunityPage({
     setIsConfirmationDialogOpen(true);
   };
 
-  const handleConfirmLend = () => {
-    toast({
-      title: "Investment successful",
-      description: `You have successfully invested ${lendAmount} ${opportunity?.accepted_token}.`,
-    });
-    setIsConfirmationDialogOpen(false);
-    setLendAmount("");
+  const {
+    data: regularTxHash,
+    isPending: isRegularTxPending,
+    writeContractAsync: writeRegularTx,
+    error: regularTxError,
+  } = useWriteContract();
+
+  // Regular transaction confirmation
+  const {
+    isLoading: isRegularTxConfirming,
+    isSuccess: isRegularTxConfirmed,
+    isError: isRegularTxFailed,
+  } = useWaitForTransactionReceipt({
+    hash: regularTxHash,
+  });
+
+
+
+  const handleConfirmLend = async () => {
+    try {
+      setIsTransactionInProgress(true);
+      setTransactionError(null);
+
+      // First get the token address based on symbol
+      const tokenAddress = getTokenAddressBySymbol(opportunity.accepted_token);
+      if (!tokenAddress) {
+        throw new Error("Invalid token address");
+      }
+
+      // Send approval transaction
+      const approveResult = await writeRegularTx({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [contractAddress, parseUnits(lendAmount, 2)],
+      });
+
+      if (!approveResult) {
+        throw new Error("Failed to submit approval transaction");
+      }
+
+      toast({
+        title: "Approval submitted",
+        description: "Waiting for confirmation...",
+      });
+
+      // Wait for the approval transaction to be confirmed
+      const approvalReceipt = await waitForTransactionReceipt(config, {
+        hash: approveResult,
+      });
+
+      toast({
+        title: "Approval confirmed",
+        description: `Approval confirmed in block ${approvalReceipt.blockNumber}`,
+      });
+
+      // Proceed with funding after approval
+      const fundResult = await writeRegularTx({
+        address: contractAddress,
+        abi: lendingABI,
+        functionName: "fundUser",
+        args: [opportunity.proposer_wallet as `0x${string}`, parseUnits(lendAmount, 2)],
+      });
+
+      if (!fundResult) {
+        throw new Error("Failed to submit funding transaction");
+      }
+
+      toast({
+        title: "Investment submitted",
+        description: "Waiting for confirmation...",
+      });
+
+      // Wait for funding transaction to be confirmed
+      const fundReceipt = await waitForTransactionReceipt(config, {
+        hash: fundResult,
+      });
+
+      setIsTransactionSuccess(true);
+      toast({
+        title: "Investment successful",
+        description: `You have successfully invested ${lendAmount} ${opportunity?.accepted_token}.`,
+      });
+
+      setIsConfirmationDialogOpen(false);
+      setLendAmount("");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const match = errorMessage.match(/data="([^"]+)"/);
+
+      setIsTransactionFailed(true);
+
+      if (match && match[1]) {
+        const parsedError = match[1].split(",")[0];
+        try {
+          const decodedError = decodeErrorResult({
+            abi: lendingABI,
+            data: parsedError as `0x${string}`,
+          });
+
+          const userMessage = getUserFriendlyError(decodedError.errorName);
+          setTransactionError(userMessage);
+
+          toast({
+            variant: "destructive",
+            title: "Transaction Failed",
+            description: userMessage,
+          });
+
+        } catch (decodeError) {
+          console.error("Failed to decode contract error:", {
+            original: errorMessage,
+            parsed: parsedError,
+            decodeError,
+          });
+          setTransactionError("Failed to decode contract error");
+        }
+      } else {
+        const friendlyMessage = getTransactionError(errorMessage);
+        setTransactionError(friendlyMessage);
+        console.error("Transaction failed:", friendlyMessage);
+      }
+    } finally {
+      setIsTransactionInProgress(false);
+    }
   };
+
+  const handleInvestment = async () => {
+    try {
+      setIsTransactionInProgress(true);
+      setTransactionError(null);
+
+      // Your investment transaction logic here
+      // For example:
+      // await writeContract({...})
+
+      setIsTransactionSuccess(true);
+      setIsLendDialogOpen(false);
+      setIsConfirmationDialogOpen(true);
+    } catch (error) {
+      console.error('Investment failed:', error);
+      setTransactionError(error instanceof Error ? error.message : 'Transaction failed');
+      setIsTransactionFailed(true);
+    } finally {
+      setIsTransactionInProgress(false);
+    }
+  };
+
+  // Reset states when dialog closes
+  useEffect(() => {
+    if (!isLendDialogOpen) {
+      setIsTransactionInProgress(false);
+      setIsTransactionSuccess(false);
+      setIsTransactionFailed(false);
+      setTransactionError(null);
+    }
+  }, [isLendDialogOpen]);
 
   if (!opportunity) {
     return (
@@ -242,7 +506,7 @@ export default function LendingOpportunityPage({
           <CardContent>
             <div className="flex items-end gap-2">
               <p className="text-3xl font-bold gradient-text">
-                {opportunity.expected_return}
+                {opportunity.expected_return}%
               </p>
               <TooltipProvider>
                 <Tooltip>
@@ -360,9 +624,8 @@ export default function LendingOpportunityPage({
                         <div className="bg-slate-800/50 p-4 rounded-lg">
                           <p className="text-sm text-slate-400">
                             Current Investors
-                          </p>
-                          <p className="text-sm font-medium">
-                            {opportunity.investor_count}
+                          </p>                          <p className="text-sm font-medium">
+                            {isCollateralRaisingInfoDataLoading ? "Loading..." : currentInvestorCount}
                           </p>
                         </div>
                         <div className="bg-slate-800/50 p-4 rounded-lg">
@@ -370,7 +633,7 @@ export default function LendingOpportunityPage({
                             Expected Return
                           </p>
                           <p className="text-sm font-medium">
-                            {opportunity.expected_return}
+                            {opportunity.expected_return}%
                           </p>
                         </div>
                       </div>
@@ -383,24 +646,21 @@ export default function LendingOpportunityPage({
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-slate-400">
-                            {opportunity.current_funding} /{" "}
-                            {opportunity.target_funding}{" "}
-                            {opportunity.accepted_token}
+                            {isCollateralRaisingInfoDataLoading ? "Loading..." : (
+                              `${currentFundingAmount} / ${opportunity.target_funding} ${opportunity.accepted_token}`
+                            )}
                           </span>
                           <span>
-                            {(
-                              (Number(opportunity.current_funding) /
-                                Number(opportunity.target_funding)) *
-                              100
-                            ).toFixed(2)}
+                            {isCollateralRaisingInfoDataLoading ? "..." : (
+                              ((Number(currentFundingAmount) / Number(opportunity.target_funding)) * 100).toFixed(2)
+                            )}
                             %
                           </span>
                         </div>
                         <Progress
                           value={
-                            (Number(opportunity.current_funding) /
-                              Number(opportunity.target_funding)) *
-                            100
+                            isCollateralRaisingInfoDataLoading ? 0 :
+                              (Number(currentFundingAmount) / Number(opportunity.target_funding)) * 100
                           }
                           className="h-2 bg-slate-800"
                         />
@@ -458,113 +718,12 @@ export default function LendingOpportunityPage({
             </TabsContent>
 
             <TabsContent value="analysis" className="space-y-6">
-              {opportunity.wallet_analysis && (
-                <Card className="web3-card">
-                  <CardHeader>
-                    <CardTitle>Wallet Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-slate-800/50 p-4 rounded-lg">
-                          <h3 className="font-medium mb-2">Risk Assessment</h3>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Risk Level</span>
-                              <span
-                                className={
-                                  opportunity.wallet_analysis.risk_level ===
-                                  "low"
-                                    ? "text-green-500"
-                                    : opportunity.wallet_analysis.risk_level ===
-                                      "medium"
-                                    ? "text-yellow-500"
-                                    : opportunity.wallet_analysis.risk_level ===
-                                      "high"
-                                    ? "text-red-500"
-                                    : "text-gray-500"
-                                }
-                              >
-                                {opportunity.wallet_analysis.risk_level
-                                  .charAt(0)
-                                  .toUpperCase() +
-                                  opportunity.wallet_analysis.risk_level.slice(
-                                    1
-                                  )}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">
-                                Final Score
-                              </span>
-                              <span>
-                                {opportunity.wallet_analysis.final_score}/100
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-800/50 p-4 rounded-lg">
-                          <h3 className="font-medium mb-2">Wallet Metadata</h3>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Age</span>
-                              <span>
-                                {
-                                  opportunity.wallet_analysis.wallet_metadata
-                                    .age
-                                }
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">
-                                Activity Level
-                              </span>
-                              <span>
-                                {
-                                  opportunity.wallet_analysis.wallet_metadata
-                                    .activity_level
-                                }
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">
-                                Transactions
-                              </span>
-                              <span>
-                                {
-                                  opportunity.wallet_analysis.wallet_metadata
-                                    .transaction_count
-                                }
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {opportunity.wallet_analysis.comments &&
-                        opportunity.wallet_analysis.comments.length > 0 && (
-                          <div className="bg-slate-800/50 p-4 rounded-lg">
-                            <h3 className="font-medium mb-2">
-                              Analysis Comments
-                            </h3>
-                            <ul className="space-y-1">
-                              {opportunity.wallet_analysis.comments.map(
-                                (comment, index) => (
-                                  <li
-                                    key={index}
-                                    className="text-sm text-slate-400"
-                                  >
-                                    • {comment}
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                    </div>
-                  </CardContent>
-                </Card>
+              {opportunity.wallet_analysis ? (
+                <AIWalletAnalysisComponent analysis={opportunity.wallet_analysis} />
+              ) : (
+                <p className="text-slate-400">
+                  No wallet analysis available for this proposal.
+                </p>
               )}
             </TabsContent>
           </Tabs>
@@ -575,7 +734,7 @@ export default function LendingOpportunityPage({
             <CardHeader>
               <CardTitle>Invest in {opportunity.company_name}</CardTitle>
               <CardDescription>
-                Expected return: {opportunity.expected_return}
+                Expected return: {opportunity.expected_return}%
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -589,7 +748,7 @@ export default function LendingOpportunityPage({
                 <div className="flex justify-between">
                   <p className="text-sm text-slate-400">Expected Return</p>
                   <p className="text-sm font-medium text-primary">
-                    {opportunity.expected_return}
+                    {opportunity.expected_return}%
                   </p>
                 </div>
                 <div className="flex justify-between">
@@ -621,27 +780,29 @@ export default function LendingOpportunityPage({
                 <div className="flex justify-between">
                   <p className="text-sm text-slate-400">Progress</p>
                   <p className="text-sm font-medium">
-                    {(
-                      (Number(opportunity.current_funding) /
-                        Number(opportunity.target_funding)) *
-                      100
-                    ).toFixed(2)}
+                    {isCollateralRaisingInfoDataLoading ? "..." : (
+                      ((Number(currentFundingAmount) / Number(opportunity.target_funding)) * 100).toFixed(2)
+                    )}
                     %
                   </p>
                 </div>
                 <Progress
                   value={
-                    (Number(opportunity.current_funding) /
-                      Number(opportunity.target_funding)) *
-                    100
+                    isCollateralRaisingInfoDataLoading ? 0 :
+                      (Number(currentFundingAmount) / Number(opportunity.target_funding)) * 100
                   }
                   className="h-2 bg-slate-800"
-                />
-                <div className="flex justify-between text-xs text-slate-400">
+                />                <div className="flex justify-between text-xs text-slate-400">
                   <span>
-                    {opportunity.current_funding} / {opportunity.target_funding}
+                    {isCollateralRaisingInfoDataLoading ? "Loading..." :
+                      `${currentFundingAmount} / ${opportunity.target_funding}`
+                    }
                   </span>
-                  <span>{opportunity.investor_count} investors</span>
+                  <span>
+                    {isCollateralRaisingInfoDataLoading ? "Loading..." :
+                      `${currentInvestorCount} investor${currentInvestorCount !== 1 ? 's' : ''}`
+                    }
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -670,50 +831,74 @@ export default function LendingOpportunityPage({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="amount" className="text-sm font-medium">
-                  Amount
-                </Label>
-                <span className="text-sm text-slate-400">
-                  Min: {opportunity.minimum_investment} | Max:{" "}
-                  {opportunity.maximum_investment}
-                </span>
+          {isTransactionInProgress ? (
+            <div className="p-4 bg-blue-950/30 border border-blue-800/50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                <h3 className="text-lg font-medium text-blue-400">
+                  Transaction in Progress
+                </h3>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  id="amount"
-                  placeholder={`0.00 ${opportunity.accepted_token}`}
-                  value={lendAmount}
-                  onChange={(e) => setLendAmount(e.target.value)}
-                  className="bg-slate-800 border-slate-700"
-                />
-              </div>
+              <p className="text-slate-300 text-sm">
+                Please wait while your transaction is being processed...
+              </p>
             </div>
+          ) : isTransactionFailed ? (
+            <div className="p-4 bg-red-950/30 border border-red-800/50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                <h3 className="text-lg font-medium text-red-400">Transaction Failed</h3>
+              </div>
+              <p className="text-slate-300 text-sm">
+                {transactionError || "Your transaction couldn't be completed. Please try again."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="amount" className="text-sm font-medium">
+                    Amount
+                  </Label>
+                  <span className="text-sm text-slate-400">
+                    Min: {opportunity.minimum_investment} | Max:{" "}
+                    {opportunity.maximum_investment}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    id="amount"
+                    placeholder={`0.00 ${opportunity.accepted_token}`}
+                    value={lendAmount}
+                    onChange={(e) => setLendAmount(e.target.value)}
+                    className="bg-slate-800 border-slate-700"
+                  />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Investment Overview</Label>
-              <div className="bg-slate-800/70 rounded-lg p-4 space-y-2 backdrop-blur-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Amount</span>
-                  <span>
-                    {lendAmount || "0.00"} {opportunity.accepted_token}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Expected Return</span>
-                  <span className="text-primary">
-                    {calculateReturns()} {opportunity.accepted_token}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Duration</span>
-                  <span>{opportunity.duration}</span>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Investment Overview</Label>
+                <div className="bg-slate-800/70 rounded-lg p-4 space-y-2 backdrop-blur-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Amount</span>
+                    <span>
+                      {lendAmount || "0.00"} {opportunity.accepted_token}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Expected Return</span>
+                    <span className="text-primary">
+                      {calculateReturns()} {opportunity.accepted_token}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Duration</span>
+                    <span>{opportunity.duration}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           <DialogFooter>
             <Button
@@ -744,43 +929,87 @@ export default function LendingOpportunityPage({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <div className="bg-slate-800/70 rounded-lg p-4 space-y-3 backdrop-blur-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Investment Amount</span>
-                <span>
-                  {lendAmount} {opportunity.accepted_token}
-                </span>
+          {isTransactionInProgress ? (
+            <div className="p-4 bg-blue-950/30 border border-blue-800/50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                <h3 className="text-lg font-medium text-blue-400">
+                  {isRegularTxPending
+                    ? "Approval Pending"
+                    : isRegularTxConfirming
+                      ? "Confirming Approval"
+                      : "Processing Investment"}
+                </h3>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Expected Return</span>
-                <span className="text-primary">
-                  {calculateReturns()} {opportunity.accepted_token}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Duration</span>
-                <span>{opportunity.duration}</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/50 p-4 rounded-lg">
-              <p className="text-sm text-slate-400">
-                By confirming this investment, you agree to the terms and
-                conditions of this business proposal.
+              <p className="text-slate-300 text-sm">
+                {isRegularTxPending
+                  ? "Please confirm the approval transaction in your wallet..."
+                  : isRegularTxConfirming
+                    ? "Waiting for the approval transaction to be confirmed..."
+                    : "Please wait while your investment is being processed..."}
               </p>
             </div>
-          </div>
+          ) : isTransactionFailed ? (
+            <div className="p-4 bg-red-950/30 border border-red-800/50 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+                <h3 className="text-lg font-medium text-red-400">Transaction Failed</h3>
+              </div>
+              <p className="text-slate-300 text-sm">
+                {transactionError || "Your transaction couldn't be completed. Please try again."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="bg-slate-800/70 rounded-lg p-4 space-y-3 backdrop-blur-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Investment Amount</span>
+                  <span>
+                    {lendAmount} {opportunity.accepted_token}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Expected Return</span>
+                  <span className="text-primary">
+                    {calculateReturns()} {opportunity.accepted_token}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Duration</span>
+                  <span>{opportunity.duration}</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 p-4 rounded-lg">
+                <p className="text-sm text-slate-400">
+                  By confirming this investment, you agree to the terms and
+                  conditions of this business proposal.
+                </p>
+              </div>
+            </div>
+          )}
 
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsConfirmationDialogOpen(false)}
+              disabled={isTransactionInProgress}
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirmLend} className="web3-button">
-              Confirm Investment
+            <Button
+              onClick={handleConfirmLend}
+              className="web3-button"
+              disabled={isTransactionInProgress}
+            >
+              {isTransactionInProgress ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processing...
+                </div>
+              ) : (
+                "Confirm Investment"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
