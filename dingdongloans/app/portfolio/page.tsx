@@ -14,6 +14,7 @@ import { useReadContract, useReadContracts } from "wagmi"
 import { lendingABI } from "@/contracts/lendingABI"
 import { formatUnits } from "viem"
 import { pricefeedABI } from "@/contracts/pricefeedABI"
+import { config } from "@/lib/client-config"
 
 export default function PortfolioPage() {
   const { isConnected, connect, address } = useWallet()
@@ -94,6 +95,17 @@ export default function PortfolioPage() {
     },
   })
 
+  // Get debt raising token for USDT
+  const { data: totalCollateralValue } = useReadContract({
+    address: contractAddress as `0x${string}`,
+    abi: lendingABI,
+    args: address ? [address] : undefined,
+    functionName: "getTotalCollateralValueInDebtToken",
+    query: {
+      enabled: !!address,
+      refetchInterval: 10000
+    }
+  });
   // Format the collateral balances by converting from wei to proper units
   const formattedBalances = useMemo(() => {
     return {
@@ -181,8 +193,8 @@ export default function PortfolioPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-end gap-2">
-              <p className="text-3xl font-bold">${totalDepositValue.toFixed(2)}</p>
-              <p className="text-sm text-slate-400 mb-1">USD</p>
+              <p className="text-3xl font-bold">{totalCollateralValue && `${formatUnits(totalCollateralValue, 2)}`}</p>
+              <p className="text-sm text-slate-400 mb-1">IDRX</p>
             </div>
           </CardContent>
         </Card>

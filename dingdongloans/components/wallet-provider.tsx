@@ -19,7 +19,8 @@ import {
 } from "@xellar/kit";
 import axios from "axios";
 import { liskSepolia } from "viem/chains";
-import { config } from "@/data/mock-data";
+import { config } from "@/lib/client-config";
+
 
 // Define config and queryClient for XellarKit/Wagmi
 // TODO: Replace with your actual project IDs
@@ -136,6 +137,8 @@ function WalletStateController({ children }: { children: ReactNode }) {
 
 	const disconnect = () => {
 		wagmiDisconnect();
+		// Remove the access token from localStorage when disconnecting
+		localStorage.removeItem("access_token");
 		console.log("Wallet disconnect initiated via context");
 		toast({
 			title: "Wallet disconnected",

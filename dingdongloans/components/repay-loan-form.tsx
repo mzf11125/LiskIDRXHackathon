@@ -41,7 +41,8 @@ import {
 import { pricefeedABI } from "@/contracts/pricefeedABI"
 import { erc20Abi, decodeErrorResult } from 'viem'
 import { pools } from "@/data/mock-data";
-import { contractAddress, config } from "@/data/mock-data";
+import { contractAddress } from "@/data/mock-data";
+import { config } from "@/lib/client-config";
 import { getUserFriendlyError, getTransactionError } from "@/lib/errorHandling"
 import { lendingABI } from "@/contracts/lendingABI"
 

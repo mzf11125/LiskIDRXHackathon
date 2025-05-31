@@ -39,7 +39,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { waitForTransactionReceipt } from "@wagmi/core";
 import { lendingABI } from "@/contracts/lendingABI";
 import { parseUnits, formatUnits, decodeErrorResult } from "viem/utils";
-import { config } from "@/data/mock-data";
+
 import { getTransactionError, getUserFriendlyError } from "@/lib/errorHandling";
 const formSchema = z.object({
   borrowAsset: z.string({

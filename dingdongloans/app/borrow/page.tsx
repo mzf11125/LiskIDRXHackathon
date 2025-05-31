@@ -22,7 +22,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { lendingABI } from "@/contracts/lendingABI";
 import { contractAddress } from "@/data/mock-data";
 import { formatUnits } from "viem";
@@ -71,7 +71,39 @@ export default function BorrowPage() {
   const router = useRouter();
   const { toast } = useToast();
   const api = useAxios();
+  const {
+    data: regularTxHash,
+    isPending: isRegularTxPending,
+    writeContractAsync: writeRegularTx,
+    error: regularTxError,
+  } = useWriteContract();
 
+  // Regular transaction confirmation
+  const {
+    isLoading: isRegularTxConfirming,
+    isSuccess: isRegularTxConfirmed,
+    isError: isRegularTxFailed,
+  } = useWaitForTransactionReceipt({
+    hash: regularTxHash,
+  });
+  const handleResetCollateralRaise = async () => {
+    if (!address) return;
+    try {
+      await writeRegularTx({
+        address: contractAddress as `0x${string}`,
+        abi: lendingABI,
+        functionName: "resetCollateralRaising",
+        account: address as `0x${string}`
+      })
+    } catch (error) {
+      console.error("Error resetting collateral raise:", error);
+      toast({
+        title: "Reset Failed",
+        description: "There was an error resetting your collateral raise.",
+        variant: "destructive",
+      });
+    }
+  }
   // Add hooks for contract data
   const { data: totalCollateralValue } = useReadContract({
     address: contractAddress as `0x${string}`,
@@ -137,6 +169,8 @@ export default function BorrowPage() {
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [isAnalyticsDialogOpen, setIsAnalyticsDialogOpen] = useState(false);
   const [isRepayDialogOpen, setIsRepayDialogOpen] = useState(false);
+
+
 
   useEffect(() => {
     const loadProposals = async () => {
@@ -572,6 +606,7 @@ export default function BorrowPage() {
               open={isCreateDialogOpen}
               onOpenChange={setIsCreateDialogOpen}
             >
+              <Button onClick={handleResetCollateralRaise}>Reset Collateral Raise</Button>
               <DialogTrigger asChild>
                 <Button className="web3-button">
                   <PlusCircle className="mr-2 h-4 w-4" /> Create Proposal

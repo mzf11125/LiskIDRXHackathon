@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Check, Info, Loader2, AlertCircle } from "lucide-react"
-import { pools, addUserDeposit, contractAddress, config } from "@/data/mock-data"
+import { pools, addUserDeposit, contractAddress } from "@/data/mock-data"
+import { config } from "@/lib/client-config"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAccount, useBalance, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { erc20Abi, parseUnits, formatUnits, decodeErrorResult } from 'viem'

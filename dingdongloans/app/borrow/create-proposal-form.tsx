@@ -337,7 +337,7 @@ export default function CreateProposalForm({
         response = await api.put(`/proposals/${proposalId}`, proposal);
       } else {
         // Create new proposal
-        response = await api.post("/proposals", proposal);
+        response = await api.post("/proposals/", proposal);
       }
 
       const createdProposal = response.data;
