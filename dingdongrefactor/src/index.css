@@ -83,12 +83,12 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: whitesmoke;
+  background-color: white;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: white;
+  border-color: #646cff;
 }
 button:focus,
 button:focus-visible {
