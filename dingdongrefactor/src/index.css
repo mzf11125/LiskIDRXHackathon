@@ -106,6 +106,31 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+  .nav {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .nav-link {
+    text-decoration: none;
+    color: #646cff;
+    font-weight: 500;
+    transition: color 0.25s;
+  }
+
+  .nav-link:hover {
+    color: #535bf2;
+  }
+
+  .app {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+  }
 }
 
 @theme inline {
