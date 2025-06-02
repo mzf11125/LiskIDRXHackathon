@@ -34,6 +34,9 @@ import { Separator } from "@/components/ui/separator";
 const profileSchema = z.object({
   display_name: z.string().min(2, "Display name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
+  bio: z.string().optional(),
+  phone: z.string().optional(),
+  website: z.string().url("Please enter a valid website URL").optional().or(z.literal("")),
   company_name: z.string().min(2, "Company name must be at least 2 characters"),
   company_position: z.string().min(2, "Position must be at least 2 characters"),
   company_website: z.string().url("Please enter a valid website URL"),
@@ -56,6 +59,9 @@ export default function ProfilePage() {
     defaultValues: {
       display_name: "",
       email: "",
+      bio: "",
+      phone: "",
+      website: "",
       company_name: "",
       company_position: "",
       company_website: "",
@@ -73,6 +79,9 @@ export default function ProfilePage() {
           form.reset({
             display_name: profileData.display_name || "",
             email: profileData.email || "",
+            bio: profileData.bio || "",
+            phone: profileData.phone || "",
+            website: profileData.website || "",
             company_name: profileData.company_name || "",
             company_position: profileData.company_position || "",
             company_website: profileData.company_website || "",
@@ -312,6 +321,73 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Bio
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Tell us about yourself..."
+                            {...field}
+                            className="bg-slate-800 border-slate-700"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          A brief description about yourself (optional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="+1234567890"
+                            {...field}
+                            className="bg-slate-800 border-slate-700"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Your contact phone number (optional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Personal Website</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            placeholder="https://www.yourwebsite.com"
+                            {...field}
+                            className="bg-slate-800 border-slate-700"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Your personal or professional website (optional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <Separator className="bg-slate-700" />
@@ -368,6 +444,9 @@ export default function ProfilePage() {
                     {profile.company_position} at {profile.company_name}
                   </p>
                   <p className="text-sm text-slate-400 mt-1">{profile.email}</p>
+                  {profile.phone && (
+                    <p className="text-sm text-slate-400">{profile.phone}</p>
+                  )}
                 </div>
                 <div>
                   <a
@@ -378,10 +457,29 @@ export default function ProfilePage() {
                   >
                     {profile.company_website}
                   </a>
+                  {profile.website && (
+                    <a
+                      href={profile.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm block"
+                    >
+                      {profile.website}
+                    </a>
+                  )}
                 </div>
               </div>
               <div className="mt-4">
-                <p className="text-sm">{profile.company_description}</p>
+                {profile.bio && (
+                  <div className="mb-3">
+                    <h5 className="font-medium text-sm mb-1">Bio:</h5>
+                    <p className="text-sm text-slate-400">{profile.bio}</p>
+                  </div>
+                )}
+                <div>
+                  <h5 className="font-medium text-sm mb-1">Company Description:</h5>
+                  <p className="text-sm text-slate-400">{profile.company_description}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
