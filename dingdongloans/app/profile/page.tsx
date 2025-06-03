@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/components/wallet-provider";
 import { useProfile } from "@/components/ui/use-profile";
-import { useAxios } from "@/hooks/useAxios";
+import { useAxios } from "@/hooks/use-axios";
 import { User, Building, Mail, Globe, Briefcase, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";

@@ -1,8 +1,6 @@
 import { api } from "@/hooks/use-axios";
-import type {
+import type { 
 	APIWalletAnalysis,
-	UserProfile,
-	ProfileUpdateRequest,
 } from "@/types/wallet-analysis";
 
 export const analyzeWallet = async (
@@ -43,26 +41,3 @@ export const getOrAnalyzeWallet = async (
 		return await analyzeWallet(walletAddress);
 	}
 };
-
-// Profile API functions
-export const getUserProfile = async (): Promise<UserProfile> => {
-	const { data } = await api.get("/profiles/me");
-	return data;
-};
-
-export const getProfileByWallet = async (
-	walletAddress: string
-): Promise<UserProfile> => {
-	const { data } = await api.get(`/profiles/${walletAddress}`);
-	return data;
-};
-
-export const createOrUpdateUserProfile = async (
-	profileData: ProfileUpdateRequest
-): Promise<UserProfile> => {
-	const { data } = await api.put("/profiles/me", profileData);
-	return data;
-};
-
-// Keep backward compatibility
-export const updateUserProfile = createOrUpdateUserProfile;

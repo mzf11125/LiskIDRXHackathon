@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/components/wallet-provider";
-import { getUserProfile, updateUserProfile } from "@/data/wallet-analysis-api";
-import { UserProfile, ProfileUpdateRequest } from "@/types/wallet-analysis";
+import { getUserProfile, updateUserProfile } from "@/data/profile-api";
+import { UserProfile, ProfileUpdateRequest } from "@/types/profile";
 
 // Define the profile data structure
 export type ProfileData = UserProfile;

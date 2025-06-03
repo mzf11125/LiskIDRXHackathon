@@ -1,8 +1,10 @@
 import type { BusinessProposal } from "@/types/business-proposal";
 import { api } from "@/hooks/use-axios";
-import { getOrAnalyzeWallet, getUserProfile } from "@/data/wallet-analysis-api";
+import { getOrAnalyzeWallet } from "@/data/wallet-analysis-api";
+import { getUserProfile } from "@/data/profile-api";
 
 // Function to fetch business proposals from the API
+
 export const fetchBusinessProposals = async (
   skip = 0,
   limit = 20

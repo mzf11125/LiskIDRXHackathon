@@ -5,8 +5,6 @@ import type {
 	UserSupplyType,
 } from "@/types/platform";
 
-// Client-side config moved to lib/client-config.ts
-
 export const pools: PoolType[] = [
 	{
 		id: "idrx-main",
